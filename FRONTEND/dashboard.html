@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Owner Dashboard</title>
+</head>
+<body>
+  <h2>Owner Dashboard</h2>
+  <button onclick="loadDashboard()">Load Dashboard</button>
+  <p id="result"></p>
+
+  <script>
+    function loadDashboard() {
+      fetch("http://localhost:3000/owner", {
+        headers: {
+          Authorization: localStorage.getItem("jwtToken")
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("result").innerText = data.message || "Access Denied ❌";
+      })
+      .catch(() => {
+        document.getElementById("result").innerText = "Unauthorized ❌";
+      });
+    }
+  </script>
+</body>
+</html>
