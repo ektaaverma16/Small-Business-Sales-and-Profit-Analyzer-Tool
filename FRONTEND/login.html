@@ -1,16 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>JWT Login</title>
+  <meta charset="UTF-8">
+  <title>Login | Business Analyzer</title>
+
+  <!-- Link CSS -->
+  <link rel="stylesheet" href="login.css">
 </head>
 <body>
-  <h2>Login Form</h2>
-  <form id="loginForm">
-    Username: <input type="text" id="username" required><br><br>
-    Password: <input type="password" id="password" required><br><br>
-    <button type="submit">Login</button>
-  </form>
-  <p id="result"></p>
+
+  <div class="login-box">
+    <h2>Welcome Back</h2>
+    <p class="subtitle">Login to your account</p>
+
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Username" required>
+      <input type="password" id="password" placeholder="Password" required>
+
+      <button type="submit">Login</button>
+    </form>
+
+    <p id="result"></p>
+
+    <p class="signup-text">
+      New user? <a href="signup.html">Create account</a>
+    </p>
+  </div>
 
   <script>
     document.getElementById("loginForm").onsubmit = async function(e) {
@@ -18,7 +33,9 @@
 
       const response = await fetch("http://localhost:3000/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           username: username.value,
           password: password.value
@@ -26,13 +43,22 @@
       });
 
       const data = await response.json();
+
       if (data.token) {
         localStorage.setItem("jwtToken", data.token);
+        document.getElementById("result").style.color = "green";
         document.getElementById("result").innerText = "Login Successful ✅";
+
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1000);
+
       } else {
-        document.getElementById("result").innerText = "Login Failed ❌";
+        document.getElementById("result").style.color = "red";
+        document.getElementById("result").innerText = "Invalid Credentials ❌";
       }
     };
   </script>
+
 </body>
 </html>
