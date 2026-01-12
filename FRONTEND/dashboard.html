@@ -1,28 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Owner Dashboard</title>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+
+  <!-- Link external CSS -->
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-  <h2>Owner Dashboard</h2>
-  <button onclick="loadDashboard()">Load Dashboard</button>
-  <p id="result"></p>
+
+  <h2>Welcome to Dashboard ✅</h2>
+
+  <p>You are successfully logged in.</p>
+
+  <h3>Your JWT Token:</h3>
+  <div class="token-box" id="tokenBox"></div>
+
+  <button onclick="logout()">Logout</button>
 
   <script>
-    function loadDashboard() {
-      fetch("http://localhost:3000/owner", {
-        headers: {
-          Authorization: localStorage.getItem("jwtToken")
-        }
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("result").innerText = data.message || "Access Denied ❌";
-      })
-      .catch(() => {
-        document.getElementById("result").innerText = "Unauthorized ❌";
-      });
+    // 1️⃣ Get token from localStorage
+    const token = localStorage.getItem("jwtToken");
+
+    // 2️⃣ If no token → redirect to login
+    if (!token) {
+      alert("Unauthorized! Please login again.");
+      window.location.href = "login.html";
+    } else {
+      // 3️⃣ Show token on dashboard
+      document.getElementById("tokenBox").innerText = token;
+    }
+
+    // 4️⃣ Logout function
+    function logout() {
+      localStorage.removeItem("jwtToken");
+      alert("Logged out successfully");
+      window.location.href = "login.html";
     }
   </script>
+
 </body>
 </html>

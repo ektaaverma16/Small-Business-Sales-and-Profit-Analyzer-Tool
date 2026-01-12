@@ -4,5 +4,11 @@
     "password": "56789",
     "role": "Owner",
     "business": "Textiles"
+  },
+  {
+    "username": "Harry",
+    "password": "1234",
+    "role": "Customer",
+    "business": "Shop"
   }
 ]

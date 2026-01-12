@@ -1,0 +1,18 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 40px;
+}
+
+.token-box {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ccc;
+  word-break: break-all;
+  background: #f9f9f9;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px 15px;
+  cursor: pointer;
+}

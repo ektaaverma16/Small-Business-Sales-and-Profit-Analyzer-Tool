@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const bodyParser = require("body-parser");
 const fs = require("fs");
 const cors = require("cors");
+const verifyToken = require("./middleware/auth");
+
 
 const app = express();
 app.use(bodyParser.json());
@@ -68,6 +70,14 @@ function verifyRole(role) {
     });
   };
 }
+
+app.get("/dashboard-data", verifyToken, (req, res) => {
+  res.json({
+    message: "Protected data accessed",
+    user: req.user
+  });
+});
+
 
 /* ------------------- OWNER ONLY ------------------- */
 app.get("/owner", verifyRole("Owner"), (req, res) => {
