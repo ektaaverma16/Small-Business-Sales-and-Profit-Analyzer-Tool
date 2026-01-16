@@ -1,34 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Login | Business Analyzer</title>
-
-  <!-- Link CSS -->
   <link rel="stylesheet" href="login.css">
 </head>
+
 <body>
+  <div class="header">
+    <div class="login-box">
+      <h2>Welcome back!</h2>
+      <p class="subtitle">Login to your account</p>
 
-  <div class="login-box">
-    <h2>Welcome</h2>
-    <p class="subtitle">Login to your account</p>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
 
-    <form id="loginForm">
-      <input type="text" id="username" placeholder="Username" required>
-      <input type="password" id="password" placeholder="Password" required>
+        <!-- NEW -->
+        <select id="role" required>
+          <option value="">Select Role</option>
+          <option value="Owner">Owner</option>
+          <option value="Manager">Manager</option>
+          <option value="Employee">Employee/Staff</option>
+          <option value="Accountant">Accountant</option>
+        </select>
 
-      <button type="submit">Login</button>
-    </form>
+        <!-- NEW -->
+        <select id="business" required>
+          <option value="">Select Business Type</option>
+          <option value="Retail">Retail</option>
+          <option value="Manufacturing">Manufacturing</option>
+          <option value="IT / Software">IT / Software</option>
+          <option value="Food & Hospitality">Food & Hospitality</option>
+          <option value="Healthcare">Healthcare</option>
+          <option value="Education">Education</option>
+        </select>
 
-    <p id="result"></p>
 
-    <p class="signup-text">
-      New user? <a href="signup.html">Create account</a>
-    </p>
+        <button type="submit">Login</button>
+      </form>
+
+      <p id="result"></p>
+
+      <p class="signup-text">
+        New user? <a href="signup.html">Create account</a>
+      </p>
+    </div>
   </div>
 
   <script>
-    document.getElementById("loginForm").onsubmit = async function(e) {
+    document.getElementById("loginForm").onsubmit = async function (e) {
       e.preventDefault();
 
       const response = await fetch("http://localhost:3000/login", {
@@ -38,7 +60,9 @@
         },
         body: JSON.stringify({
           username: username.value,
-          password: password.value
+          password: password.value,
+          role: role.value,
+          business: business.value
         })
       });
 
@@ -52,7 +76,6 @@
         setTimeout(() => {
           window.location.href = "dashboard.html";
         }, 1000);
-
       } else {
         document.getElementById("result").style.color = "red";
         document.getElementById("result").innerText = "Invalid Credentials ❌";
@@ -61,4 +84,5 @@
   </script>
 
 </body>
+
 </html>

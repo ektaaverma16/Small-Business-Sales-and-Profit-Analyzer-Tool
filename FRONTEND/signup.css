@@ -1,0 +1,152 @@
+* {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(120deg, #f6f9fc, #edf2f7);
+  min-height: 100vh;
+}
+
+/* Top Logo */
+.logo {
+  font-size: 25px;
+  font-weight: 700;
+  padding: 7px 32px;
+  color: #023b74;
+}
+
+/* Main Layout */
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 50px;
+  padding: 20px 40px 40px;
+}
+
+/* LEFT INFO SECTION */
+.info {
+  max-width: 300px;
+  color: #425466;
+}
+
+.info h3 {
+  margin-bottom: 6px;
+  font-size: 16px;
+  color: #0a2540;
+}
+
+.info p {
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* RIGHT CARD */
+.signup-card {
+  background: #ffffff;
+  width: 360px;               /* 🔽 reduced */
+  padding: 24px;              /* 🔽 reduced */
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(50, 50, 93, 0.1);
+}
+
+.signup-card h2 {
+  margin-bottom: 18px;
+  font-size: 22px;
+  color: #0a2540;
+}
+
+/* FORM */
+label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #425466;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px;              /* 🔽 reduced */
+  margin: 6px 0 12px;
+  border-radius: 6px;
+  border: 1px solid #d9dce1;
+  font-size: 14px;
+}
+
+input:focus,
+select:focus {
+  border-color: #635bff;
+  outline: none;
+}
+
+/* PRIMARY BUTTON */
+.primary-btn {
+  width: 100%;
+  padding: 11px;              /* 🔽 reduced */
+  background: #635bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14.5px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.primary-btn:hover {
+  background: #524ae8;
+}
+
+/* DIVIDER */
+.divider {
+  text-align: center;
+  margin: 14px 0;
+  font-size: 12.5px;
+  color: #8898aa;
+}
+
+/* GOOGLE BUTTON */
+.google-btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 6px;
+  border: 1px solid #d9dce1;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13.5px;
+}
+
+.google-btn img {
+  width: 16px;
+}
+
+.google-btn:hover {
+  background: #f6f9fc;
+}
+
+/* RESULT MESSAGE */
+#result {
+  margin-top: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-size: 13.5px;
+}
+
+/* FOOTER TEXT */
+.signin-text {
+  margin-top: 14px;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.signin-text a {
+  color: #635bff;
+  text-decoration: none;
+  font-weight: 600;
+}

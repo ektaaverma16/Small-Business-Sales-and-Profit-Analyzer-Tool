@@ -1,43 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Dashboard</title>
 
-  <!-- Link external CSS -->
-  <link rel="stylesheet" href="dashboard.css">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard | Small Business Sales & Profit Analyzer</title>
+
+  <link rel="stylesheet" href="dashboard.css" />
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300..900&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
-  <h2>Welcome to Dashboard ✅</h2>
 
-  <p>You are successfully logged in.</p>
 
-  <h3>Your JWT Token:</h3>
-  <div class="token-box" id="tokenBox"></div>
+  <!-- LAYOUT -->
+  <div class="container">
+    <div class="navigation">
+      <ul>
+        <li>
+          <a href="#">
+            <span class="icon"></span>
+            <span class="title">Analyzer</span>
+          </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" onclick="showSection('dashboard')">
+            <span class="icon"><ion-icon name="home-outline"></ion-icon></span>
+            <span class="title">Dashboard</span>
+          </a>
+        </li>
+        <li class="owner-only">
+          <a href="javascript:void(0)" onclick="showSection('users')">
+            <span class="icon"><ion-icon name="people-outline"></ion-icon></span>
+            <span class="title">Users</span>
+          </a>
+        </li>
+        <li class="owner-only manager-only employee-only">
+          <a href="javascript:void(0)" onclick="showSection('viewSales')">
+            <span class="icon"><ion-icon name="eye-outline"></ion-icon></span>
+            <span class="title">View Sales</span>
+          </a>
+        </li>
+        <li class="owner-only">
+          <a href="javascript:void(0)"  onclick="showSection('reports')">
+            <span class="icon"><ion-icon name="stats-chart-outline"></ion-icon></span>
+            <span class="title">Reports</span>
+          </a>
+        </li>
+        <li class="owner-only">
+          <a href="javascript:void(0)"  onclick="showSection('insights')">
+            <span class="icon"><ion-icon name="document-text-outline"></ion-icon></ion-icon></span>
+            <span class="title">Insights</span>
+          </a>
+        </li>
+        <li class="employee-only">
+          <a href="javascript:void(0)" onclick="showSection('addSales')">
+            <span class="icon"><ion-icon name="add-outline"></ion-icon></span>
+            <span class="title">Add Sales</span>
+          </a>
+        </li>
+        <li class="employee-only">
+          <a href="javascript:void(0)" onclick="showSection('myTasks')">
+            <span class="icon"><ion-icon name="clipboard-outline"></ion-icon></span>
+            <span class="title">My Tasks</span>
+          </a>
+        </li>
 
-  <button onclick="logout()">Logout</button>
+        <li>
+          <a href="javascript:void(0)" onclick="logout()">
+            <span class="icon"><ion-icon name="log-out-outline"></ion-icon></span>
+            <span class="title logout">Logout</span>
+          </a>
+        </li>
+      </ul>
+    </div>
 
+    <!-- MAIN CONTENT -->
+    <div class="main">
+      <!-- HEADER -->
+      <div class="topbar ">
+        <div class="toggle"><ion-icon name="menu-outline"></ion-icon></div>
+        <!-- <div class="app-name">Small Business Sales & Profit Analyzer</div> -->
+
+        <div class="user-info">
+          <span id="userName">User</span>
+          <span class="role-badge" id="userRole">Role</span>
+          <!-- <button class="logout-btn" onclick="logout()">Logout</button> -->
+        </div>
+      </div>
+      <!-- ================= DASHBOARD (SAME FOR ALL) ================= -->
+      <div id="dashboard" class="page-section active">
+        <!-- <h2>Dashboard</h2> -->
+
+        <!--  KPI CARDS -->
+        <div class="kpi-wrapper">
+
+          <!-- EMPLOYEE KPIs -->
+          <div class="stat-card employee-only">
+            <h4 class="statName">Sales Today</h4>
+            <p class="stat-value" id="empSalesToday">₹0</p>
+          </div>
+
+          <div class="stat-card employee-only">
+            <h4 class="statName">Monthly Sales</h4>
+            <p class="stat-value" id="empMonthlySales">₹0</p>
+          </div>
+
+          <div class="stat-card employee-only">
+            <h4 class="statName">Total Orders</h4>
+            <p class="stat-value" id="empTotalOrders">0</p>
+          </div>
+
+          <div class="stat-card employee-only">
+            <h4 class="statName">Avg Order Value</h4>
+            <p class="stat-value" id="empAOV">₹0</p>
+          </div>
+
+        </div>
+
+
+
+        <!-- PROFIT & LOSS BAR CHART -->
+        <div class="dashboard-card owner-only manager-only chart-card">
+          <h3 class="barchart">Profit vs Loss</h3>
+          <div class="chart-container">
+            <canvas id="profitLossChart"></canvas>
+          </div>
+        </div>
+
+
+
+        <!-- MONTHLY PROFIT GRAPH -->
+        <div class="dashboard-card owner-only manager-only chart-card">
+          <h3 class="monthlychart"> Monthly Profit Trend</h3>
+          <div class="chart-container">
+            <canvas id="monthlyProfitChart"></canvas>
+          </div>
+        </div>
+
+
+        <p id="status"></p>
+      </div>
+
+      <!-- ================= VIEW SALES ================= -->
+      <div id="viewSales" class="page-section owner-only manager-only employee-only">
+
+        <h2>Sales List</h2>
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Added By</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="salesTableBody"></tbody>
+        </table>
+        <p id="salesError"></p>
+      </div>
+
+      <!-- ================= ADD SALES ================= -->
+      <div id="addSales" class="page-section employee-only">
+        <h2>Add Sales</h2>
+        <div class="card">
+          <form id="addSalesForm">
+            <label>Product Name</label>
+            <input type="text" id="productName" required />
+
+            <label>Quantity</label>
+            <input type="number" id="quantity" min="1" required />
+
+            <label>Price per Unit (₹)</label>
+            <input type="number" id="price" min="1" required />
+
+            <label>Payment Status</label>
+            <select id="paymentStatus" required>
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+            </select>
+
+            <button type="submit" class="primary-btn">Add Sale</button>
+            <p id="salesMsg"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- ================= TASKS ================= -->
+      <div id="myTasks" class="page-section employee-only">
+        <h2>My Tasks</h2>
+        <div class="card">
+          <table class="activity-table">
+            <tr>
+              <th>Date</th>
+              <th>Task</th>
+              <th>Status</th>
+            </tr>
+            <tr>
+              <td>13 Jan</td>
+              <td>Deliver Order</td>
+              <td class="success">Completed</td>
+            </tr>
+            <tr>
+              <td>12 Jan</td>
+              <td>Update Records</td>
+              <td class="pending">Pending</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+
+      <!-- ================= USERS (OWNER ONLY) ================= -->
+<div id="users" class="page-section owner-only">
+  <h2>All Users</h2>
+
+  <table class="activity-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Business</th>
+      </tr>
+    </thead>
+    <tbody id="usersTableBody"></tbody>
+  </table>
+
+  <p id="usersError"></p>
+</div>
+
+
+    </div>
+  </div>
+
+
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <script src="dashboard.js"></script>
   <script>
-    // 1️⃣ Get token from localStorage
-    const token = localStorage.getItem("jwtToken");
+    // MenuToggle
+    let toggle = document.querySelector('.toggle');
+    let navigation = document.querySelector('.navigation');
+    let main = document.querySelector('.main');
 
-    // 2️⃣ If no token → redirect to login
-    if (!token) {
-      alert("Unauthorized! Please login again.");
-      window.location.href = "login.html";
-    } else {
-      // 3️⃣ Show token on dashboard
-      document.getElementById("tokenBox").innerText = token;
+    toggle.onclick = function () {
+      navigation.classList.toggle('active');
+      main.classList.toggle('active');
     }
 
-    // 4️⃣ Logout function
-    function logout() {
-      localStorage.removeItem("jwtToken");
-      alert("Logged out successfully");
-      window.location.href = "login.html";
-    }
   </script>
 
 </body>
+
 </html>

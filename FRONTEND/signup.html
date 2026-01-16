@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Create Account | Business Analyzer</title>
+    <link rel="stylesheet" href="signup.css">
+</head>
+
+<body>
+
+    <div class="logo">Small Business Sales & Profit Analyzer</div>
+
+    <div class="container">
+
+        <!-- LEFT INFO SECTION -->
+        <div class="info">
+            <h3>Get started quickly</h3>
+            <p>Create your business account and start analyzing sales.</p>
+
+            <h3>Support any business</h3>
+            <p>Retail, Textiles, Manufacturing, Services, IT, and more.</p>
+
+            <h3>Secure & reliable</h3>
+            <p>Your data is protected with authentication and role access.</p>
+        </div>
+
+        <!-- RIGHT SIGNUP CARD -->
+        <div class="signup-card">
+            <h2>Create your account</h2>
+
+            <form id="signupForm">
+
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter username" required>
+
+                <label>Full name</label>
+                <input type="text" id="fullname" placeholder="Your full name" required>
+
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Create password" required>
+
+                <label>Role</label>
+                <select id="role" required>
+                    <option value="">Select role</option>
+                    <option value="Owner">Owner</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Employee">Employee</option>
+                </select>
+
+                <label>Business</label>
+                <select id="business" required>
+                    <option value="">Select business</option>
+                    <option value="Textiles">Textiles</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="IT / Software">IT / Software</option>
+                    <option value="Food & Hospitality">Food & Hospitality</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Education">Education</option>
+                </select>
+
+                <button type="submit" class="primary-btn">
+                    Create account
+                </button>
+            </form>
+
+            <div class="divider">OR</div>
+
+            <!-- GOOGLE SIGNUP (UI ONLY) -->
+            <button class="google-btn">
+                <img src="https://www.svgrepo.com/show/355037/google.svg" />
+                Sign up with Google
+            </button>
+
+            <p id="result"></p>
+
+            <p class="signin-text">
+                Already have an account?
+                <a href="login.html">Sign in</a>
+            </p>
+        </div>
+    </div>
+    <!-- <script>
+    document.getElementById("signupForm").onsubmit = async function(e) {
+      e.preventDefault();
+
+      const response = await fetch("http://localhost:3000/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value,
+          role: document.getElementById("role").value,
+          business: document.getElementById("business").value
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // SAVE TOKEN
+              localStorage.setItem("jwtToken", data.token);
+
+        document.getElementById("result").style.color = "green";
+        document.getElementById("result").innerText =
+        "Signup successful! Redirecting... ✅";
+
+
+              // GO DIRECTLY TO DASHBOARD
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1000);
+      } else {
+        document.getElementById("result").style.color = "red";
+        document.getElementById("result").innerText =
+          data.message || "Signup failed ❌";
+      }
+    };
+  </script> -->
+
+    <script>
+        document.getElementById("signupForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            // GET FORM VALUES
+            const username = document.getElementById("username").value.trim();
+            const fullname = document.getElementById("fullname").value.trim();
+            const password = document.getElementById("password").value;
+            const role = document.getElementById("role").value;
+            const business = document.getElementById("business").value;
+
+            // BASIC VALIDATION
+            if (!username || !fullname || !password || !role || !business) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            try {
+                const response = await fetch("http://localhost:3000/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, fullname, password, role, business })
+                });
+
+                const data = await response.json();
+
+                const resultEl = document.getElementById("result");
+
+                if (response.ok) {
+                    // SAVE TOKEN
+                    localStorage.setItem("jwtToken", data.token);
+
+                    // SUCCESS MESSAGE
+                    resultEl.style.color = "green";
+                    resultEl.innerText = "Signup successful! Redirecting... ✅";
+
+                    // REDIRECT TO DASHBOARD
+                    setTimeout(() => window.location.href = "dashboard.html", 1000);
+                } else {
+                    resultEl.style.color = "red";
+                    resultEl.innerText = data.message || "Signup failed ❌";
+                }
+
+            } catch (error) {
+                console.error(error);
+                const resultEl = document.getElementById("result");
+                resultEl.style.color = "red";
+                resultEl.innerText = "Something went wrong ❌";
+            }
+        });
+
+        // GOOGLE SIGNUP CLICK (UI ONLY)
+        document.querySelector(".google-btn").addEventListener("click", () => {
+            alert("Google signup coming soon! ");
+        });
+    </script>
+
+
+
+</body>
+
+</html>
