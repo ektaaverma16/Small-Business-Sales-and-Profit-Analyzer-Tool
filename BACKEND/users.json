@@ -10,5 +10,35 @@
     "password": "1234",
     "role": "Customer",
     "business": "Shop"
+  },
+  {
+    "username": "somi",
+    "password": "123",
+    "role": "Manager",
+    "business": "Retail"
+  },
+  {
+    "username": "shreya897",
+    "password": "0000",
+    "role": "Employee",
+    "business": "IT / Software"
+  },
+  {
+    "username": "ektaa",
+    "password": "16",
+    "role": "Employee",
+    "business": "Textiles"
+  },
+  {
+    "username": "Ekta16",
+    "password": "1628",
+    "role": "Owner",
+    "business": "Retail"
+  },
+  {
+    "username": "sam",
+    "password": "456",
+    "role": "Manager",
+    "business": "Retail"
   }
 ]
