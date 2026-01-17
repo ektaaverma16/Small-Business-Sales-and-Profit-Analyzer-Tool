@@ -4,9 +4,12 @@
 const token = localStorage.getItem("jwtToken");
 
 if (!token) {
-  alert("Unauthorized! Please login.");
+  alert("Session expired. Please login again.");
   window.location.href = "login.html";
+    throw new Error("No token"); // ⬅️ THIS LINE IS CRITICAL
+
 }
+
 
 // =============================
 // GLOBAL CHART REFERENCES
@@ -40,8 +43,10 @@ list.forEach(item => {
 // =============================
 function loadDashboard() {
   fetch("http://localhost:3000/dashboard", {
+    method: "GET",
     headers: {
-      Authorization: `Bearer ${token}`
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
     }
   })
     .then(res => {
@@ -50,30 +55,42 @@ function loadDashboard() {
     })
     .then(data => {
       const user = data.user;
-      currentUserRole = user.role;   //  STORE ROLE
+      currentUserRole = user.role;
 
-      document.getElementById("userName").innerText = `Welcome, ${user.username}`;
+      document.body.classList.remove("role-owner", "role-manager", "role-employee");
+
+if (user.role === "Owner") document.body.classList.add("role-owner");
+if (user.role === "Manager") document.body.classList.add("role-manager");
+if (user.role === "Employee") document.body.classList.add("role-employee");
+
+
+      document.getElementById("userName").innerText =
+        `Welcome, ${user.username}`;
       document.getElementById("userRole").innerText = user.role;
 
       applyRoleVisibility(user.role);
       loadSalesForDashboard();
     })
-    .catch(() => {
-      alert("Session expired. Login again.");
-      localStorage.removeItem("jwtToken");
-      window.location.href = "login.html";
-    });
+   .catch(err => {
+  console.error(err);
+
+  if (err.message === "Unauthorized") {
+    alert("Session expired. Login again.");
+    localStorage.removeItem("jwtToken");
+    window.location.href = "login.html";
+  }
+});
+
 }
 
 // =============================
 // ROLE VISIBILITY
 // =============================
-
 function applyRoleVisibility(role) {
-  
 
-  // 1️ Hide ONLY navigation items
-  document.querySelectorAll(".navigation .owner-only, .navigation .manager-only.navigation .employee-only, ")
+  // 1️⃣ Hide ONLY navigation items
+  document
+    .querySelectorAll(".navigation .owner-only, .navigation .manager-only, .navigation .employee-only")
     .forEach(el => el.style.display = "none");
 
   if (role === "Owner") {
@@ -91,12 +108,21 @@ function applyRoleVisibility(role) {
       .forEach(el => el.style.display = "block");
   }
 
-  // 2️ Section visibility controlled ONLY by active class
+  // 🔒 Hide dashboard charts for Employee ONLY
+  if (role === "Employee") {
+    document
+      .querySelectorAll(".dashboard-card.owner-only, .dashboard-card.manager-only")
+      .forEach(el => el.style.display = "none");
+  }
+
+  // 2️⃣ Section visibility controlled ONLY by active class
   document.querySelectorAll(".page-section")
     .forEach(sec => sec.classList.remove("active"));
 
   document.getElementById("dashboard").classList.add("active");
 }
+
+
 
 // ================= LOAD USERS (OWNER) =================
 function loadUsersTable() {
@@ -176,6 +202,7 @@ function loadSalesForDashboard() {
 
 /*------SHOW SECTION-------*/
 function showSection(sectionId) {
+
   // Hide all sections
   document.querySelectorAll(".page-section")
     .forEach(sec => sec.classList.remove("active"));
@@ -186,7 +213,7 @@ function showSection(sectionId) {
   // Show selected section
   section.classList.add("active");
 
-  // IMPORTANT: Load data ONLY after section is visible
+  // Load data AFTER section is visible
   if (sectionId === "dashboard") {
     loadSalesForDashboard();
   }
@@ -202,88 +229,77 @@ function showSection(sectionId) {
 
 
 
-
 // =============================
 // KPI CALCULATIONS
 // =============================
 function updateEmployeeKPIs(sales) {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  let salesToday = 0;
-  let monthlySales = 0;
-  let totalOrders = sales.length;
-
-  sales.forEach(sale => {
-    const saleDate = new Date(sale.date);
-
-    if (saleDate.toDateString() === today.toDateString()) {
-      salesToday += sale.total;
-    }
-
-    if (
-      saleDate.getMonth() === currentMonth &&
-      saleDate.getFullYear() === currentYear
-    ) {
-      monthlySales += sale.total;
-    }
-  });
-
-  const avgOrderValue =
-    totalOrders > 0 ? Math.round(monthlySales / totalOrders) : 0;
-
-  document.getElementById("empSalesToday").innerText = `₹${salesToday}`;
-  document.getElementById("empMonthlySales").innerText = `₹${monthlySales}`;
-  document.getElementById("empTotalOrders").innerText = totalOrders;
-  document.getElementById("empAOV").innerText = `₹${avgOrderValue}`;
-}
-
-
-
-function updateKPIs(sales) {
   const today = new Date().toLocaleDateString();
 
-  let mySalesToday = 0;
-  let myOrders = 0;
-
-  let totalRevenue = 0;
+  let salesToday = 0;
   let totalOrders = sales.length;
   let pendingAmount = 0;
 
   sales.forEach(sale => {
     const saleDate = new Date(sale.date).toLocaleDateString();
 
-    // Employee KPIs (employee only sees own sales anyway)
     if (saleDate === today) {
-      mySalesToday += sale.total;
-      myOrders++;
+      salesToday += sale.total;
     }
 
-    // Owner / Manager KPIs
-    if (sale.status === "Completed") {
-      totalRevenue += sale.total;
-    } else {
+    if (sale.status !== "Completed") {
       pendingAmount += sale.total;
     }
   });
 
-  // Employee
-  if (document.getElementById("mySalesToday"))
-    document.getElementById("mySalesToday").innerText = `₹${mySalesToday}`;
+  document.getElementById("empSalesToday").innerText = `₹${salesToday}`;
+  document.getElementById("empTotalOrders").innerText = totalOrders;
+  document.getElementById("empPendingAmount").innerText = `₹${pendingAmount}`;
+}
 
-  if (document.getElementById("myOrders"))
-    document.getElementById("myOrders").innerText = myOrders;
 
-  // Owner / Manager
-  if (document.getElementById("totalRevenue"))
-    document.getElementById("totalRevenue").innerText = `₹${totalRevenue}`;
+//***************OWNER+ MANAGER ONLY************//
+function updateKPIs(sales) {
+  const today = new Date().toLocaleDateString();
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
 
-  if (document.getElementById("totalOrders"))
-    document.getElementById("totalOrders").innerText = totalOrders;
+  let salesToday = 0;
+  let monthlySales = 0;
+  let totalRevenue = 0;
+  let completedOrders = 0;
 
-  if (document.getElementById("pendingAmount"))
-    document.getElementById("pendingAmount").innerText = `₹${pendingAmount}`;
+  sales.forEach(sale => {
+    const saleDateObj = new Date(sale.date);
+    const saleDate = saleDateObj.toLocaleDateString();
+
+    if (sale.status === "Completed") {
+
+      totalRevenue += sale.total;
+      completedOrders++;
+
+      if (saleDate === today) {
+        salesToday += sale.total;
+      }
+
+      if (
+        saleDateObj.getMonth() === currentMonth &&
+        saleDateObj.getFullYear() === currentYear
+      ) {
+        monthlySales += sale.total;
+      }
+    }
+  });
+
+  const avgOrderValue =
+    completedOrders > 0
+      ? Math.round(totalRevenue / completedOrders)
+      : 0;
+
+  document.getElementById("salesToday").innerText = `₹${salesToday}`;
+  document.getElementById("monthlySales").innerText = `₹${monthlySales}`;
+  document.getElementById("avgOrderValue").innerText = `₹${avgOrderValue}`;
+  document.getElementById("totalRevenue").innerText = `₹${totalRevenue}`;
 }
 
 

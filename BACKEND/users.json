@@ -40,5 +40,11 @@
     "password": "456",
     "role": "Manager",
     "business": "Retail"
+  },
+  {
+    "username": "robert21",
+    "password": "147",
+    "role": "Owner",
+    "business": "IT / Software"
   }
 ]

@@ -49,13 +49,13 @@
           </a>
         </li>
         <li class="owner-only">
-          <a href="javascript:void(0)"  onclick="showSection('reports')">
+          <a href="javascript:void(0)" onclick="showSection('reports')">
             <span class="icon"><ion-icon name="stats-chart-outline"></ion-icon></span>
             <span class="title">Reports</span>
           </a>
         </li>
         <li class="owner-only">
-          <a href="javascript:void(0)"  onclick="showSection('insights')">
+          <a href="javascript:void(0)" onclick="showSection('insights')">
             <span class="icon"><ion-icon name="document-text-outline"></ion-icon></ion-icon></span>
             <span class="title">Insights</span>
           </a>
@@ -100,30 +100,48 @@
         <!-- <h2>Dashboard</h2> -->
 
         <!--  KPI CARDS -->
-        <div class="kpi-wrapper">
+  <div class="kpi-wrapper">
 
-          <!-- EMPLOYEE KPIs -->
-          <div class="stat-card employee-only">
-            <h4 class="statName">Sales Today</h4>
-            <p class="stat-value" id="empSalesToday">₹0</p>
-          </div>
+  <!-- ================= OWNER & MANAGER KPIs ================= -->
 
-          <div class="stat-card employee-only">
-            <h4 class="statName">Monthly Sales</h4>
-            <p class="stat-value" id="empMonthlySales">₹0</p>
-          </div>
+  <div class="stat-card owner-only manager-only">
+    <h4 class="statName">Sales Today</h4>
+    <p class="stat-value" id="salesToday">₹0</p>
+  </div>
 
-          <div class="stat-card employee-only">
-            <h4 class="statName">Total Orders</h4>
-            <p class="stat-value" id="empTotalOrders">0</p>
-          </div>
+  <div class="stat-card owner-only manager-only">
+    <h4 class="statName">Monthly Sales</h4>
+    <p class="stat-value" id="monthlySales">₹0</p>
+  </div>
 
-          <div class="stat-card employee-only">
-            <h4 class="statName">Avg Order Value</h4>
-            <p class="stat-value" id="empAOV">₹0</p>
-          </div>
+  <div class="stat-card owner-only manager-only">
+    <h4 class="statName">Avg Order Value</h4>
+    <p class="stat-value" id="avgOrderValue">₹0</p>
+  </div>
 
-        </div>
+  <div class="stat-card owner-only manager-only">
+    <h4 class="statName">Total Revenue</h4>
+    <p class="stat-value" id="totalRevenue">₹0</p>
+  </div>
+
+  <!-- ================= EMPLOYEE KPIs ================= -->
+
+  <div class="stat-card employee-only">
+    <h4 class="statName">Sales Today</h4>
+    <p class="stat-value" id="empSalesToday">₹0</p>
+  </div>
+
+  <div class="stat-card employee-only">
+    <h4 class="statName">Total Orders</h4>
+    <p class="stat-value" id="empTotalOrders">0</p>
+  </div>
+
+  <div class="stat-card employee-only">
+    <h4 class="statName">Pending Amount</h4>
+    <p class="stat-value" id="empPendingAmount">₹0</p>
+  </div>
+
+</div>
 
 
 
@@ -135,8 +153,6 @@
           </div>
         </div>
 
-
-
         <!-- MONTHLY PROFIT GRAPH -->
         <div class="dashboard-card owner-only manager-only chart-card">
           <h3 class="monthlychart"> Monthly Profit Trend</h3>
@@ -144,7 +160,6 @@
             <canvas id="monthlyProfitChart"></canvas>
           </div>
         </div>
-
 
         <p id="status"></p>
       </div>
@@ -223,22 +238,22 @@
 
 
       <!-- ================= USERS (OWNER ONLY) ================= -->
-<div id="users" class="page-section owner-only">
-  <h2>All Users</h2>
+      <div id="users" class="page-section owner-only">
+        <h2>All Users</h2>
 
-  <table class="activity-table">
-    <thead>
-      <tr>
-        <th>Username</th>
-        <th>Role</th>
-        <th>Business</th>
-      </tr>
-    </thead>
-    <tbody id="usersTableBody"></tbody>
-  </table>
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Business</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
 
-  <p id="usersError"></p>
-</div>
+        <p id="usersError"></p>
+      </div>
 
 
     </div>

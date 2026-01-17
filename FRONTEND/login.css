@@ -6,14 +6,16 @@
 
     background-image: linear-gradient(
         to right bottom,
-        #667eea,
-       #764ba2
+        #111F35,
+        #0E21A0,
+        #667eea
+       /* #764ba2 */
     );
 
     background-size: cover;
     background-position: top;
 
-    clip-path: polygon(0 0, 100% 0, 100% 75vh, 0 100%);
+    /* clip-path: polygon(0 0, 100% 0, 100% 75vh, 0 100%); */
     position: relative;
     
   display: flex;
@@ -34,7 +36,8 @@ body {
 
   .login-box {
   /* background: #ffffff; */
-  width: 280px;          /* smaller width */
+  width: 350px;  
+  height: 550px ;        /* smaller width */
   padding: 22px;        /* reduced padding */
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -51,11 +54,12 @@ body {
 .login-box h2 {
   margin-bottom: 5px;
   color: #333;
+  font-size: 30px;
 }
 
 .subtitle {
   color: #777;
-  font-size: 14px;
+  font-size: 16px;
   margin-bottom: 20px;
 }
 
@@ -78,11 +82,11 @@ input:focus {
 button {
   width: 100%;
   padding: 12px;
-  background: #667eea;
+  background: #0E21A0;
   border: none;
   border-radius: 6px;
   color: white;
-  font-size: 15px;
+  font-size: 20px;
   cursor: pointer;
   margin-top: 10px;
   transition: 0.3s;
@@ -103,7 +107,7 @@ button:hover {
 }
 
 .signup-text a {
-  color: #667eea;
+  color: #0E21A0;
   text-decoration: none;
   font-weight: bold;
 }
@@ -144,7 +148,7 @@ select:focus {
 input,
 select {
   padding: 10px;
-  font-size: 10px;
+  font-size: 15px;
 }
 
 button {
