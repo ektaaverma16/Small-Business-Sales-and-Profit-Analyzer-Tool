@@ -55,9 +55,9 @@
           </a>
         </li>
         <li class="owner-only">
-          <a href="javascript:void(0)" onclick="showSection('insights')">
+          <a href="javascript:void(0)" onclick="showSection('inventory')">
             <span class="icon"><ion-icon name="document-text-outline"></ion-icon></ion-icon></span>
-            <span class="title">Insights</span>
+            <span class="title">Inventory</span>
           </a>
         </li>
         <li class="employee-only">
@@ -100,48 +100,48 @@
         <!-- <h2>Dashboard</h2> -->
 
         <!--  KPI CARDS -->
-  <div class="kpi-wrapper">
+        <div class="kpi-wrapper">
 
-  <!-- ================= OWNER & MANAGER KPIs ================= -->
+          <!-- ================= OWNER & MANAGER KPIs ================= -->
 
-  <div class="stat-card owner-only manager-only">
-    <h4 class="statName">Sales Today</h4>
-    <p class="stat-value" id="salesToday">₹0</p>
-  </div>
+          <div class="stat-card owner-only manager-only">
+            <h4 class="statName">Sales Today</h4>
+            <p class="stat-value" id="salesToday">₹0</p>
+          </div>
 
-  <div class="stat-card owner-only manager-only">
-    <h4 class="statName">Monthly Sales</h4>
-    <p class="stat-value" id="monthlySales">₹0</p>
-  </div>
+          <div class="stat-card owner-only manager-only">
+            <h4 class="statName">Monthly Sales</h4>
+            <p class="stat-value" id="monthlySales">₹0</p>
+          </div>
 
-  <div class="stat-card owner-only manager-only">
-    <h4 class="statName">Avg Order Value</h4>
-    <p class="stat-value" id="avgOrderValue">₹0</p>
-  </div>
+          <div class="stat-card owner-only manager-only">
+            <h4 class="statName">Avg Order Value</h4>
+            <p class="stat-value" id="avgOrderValue">₹0</p>
+          </div>
 
-  <div class="stat-card owner-only manager-only">
-    <h4 class="statName">Total Revenue</h4>
-    <p class="stat-value" id="totalRevenue">₹0</p>
-  </div>
+          <div class="stat-card owner-only manager-only">
+            <h4 class="statName">Total Revenue</h4>
+            <p class="stat-value" id="totalRevenue">₹0</p>
+          </div>
 
-  <!-- ================= EMPLOYEE KPIs ================= -->
+          <!-- ================= EMPLOYEE KPIs ================= -->
 
-  <div class="stat-card employee-only">
-    <h4 class="statName">Sales Today</h4>
-    <p class="stat-value" id="empSalesToday">₹0</p>
-  </div>
+          <div class="stat-card employee-only">
+            <h4 class="statName">Sales Today</h4>
+            <p class="stat-value" id="empSalesToday">₹0</p>
+          </div>
 
-  <div class="stat-card employee-only">
-    <h4 class="statName">Total Orders</h4>
-    <p class="stat-value" id="empTotalOrders">0</p>
-  </div>
+          <div class="stat-card employee-only">
+            <h4 class="statName">Total Orders</h4>
+            <p class="stat-value" id="empTotalOrders">0</p>
+          </div>
 
-  <div class="stat-card employee-only">
-    <h4 class="statName">Pending Amount</h4>
-    <p class="stat-value" id="empPendingAmount">₹0</p>
-  </div>
+          <div class="stat-card employee-only">
+            <h4 class="statName">Pending Amount</h4>
+            <p class="stat-value" id="empPendingAmount">₹0</p>
+          </div>
 
-</div>
+        </div>
 
 
 
@@ -191,23 +191,27 @@
         <h2>Add Sales</h2>
         <div class="card">
           <form id="addSalesForm">
-            <label>Product Name</label>
-            <input type="text" id="productName" required />
+            <div class="salesInput">
+              <label>Product Name</label>
+              <input type="text" id="productName" required />
 
-            <label>Quantity</label>
-            <input type="number" id="quantity" min="1" required />
+              <label>Quantity</label>
+              <input type="number" id="quantity" min="1" required />
 
-            <label>Price per Unit (₹)</label>
-            <input type="number" id="price" min="1" required />
+              <label>Price per Unit (₹)</label>
+              <input type="number" id="price" min="1" required />
 
-            <label>Payment Status</label>
-            <select id="paymentStatus" required>
-              <option value="Completed">Completed</option>
-              <option value="Pending">Pending</option>
-            </select>
-
-            <button type="submit" class="primary-btn">Add Sale</button>
+              <label>Payment Status</label>
+              <select id="paymentStatus" required>
+                <option value="Completed">Completed</option>
+                <option value="Pending">Pending</option>
+              </select>
+              
+            </div>
+            <div class="buttonWrapper">
+            <button  type="submit" class="addSales-btn">Add Sale</button>
             <p id="salesMsg"></p>
+            </div>
           </form>
         </div>
       </div>
@@ -254,6 +258,43 @@
 
         <p id="usersError"></p>
       </div>
+
+      <!-- ================= INVENTORY ================= -->
+      <div id="inventory" class="page-section owner-only manager-only">
+        <h2>Inventory</h2>
+
+        <div class="card">
+          <form id="inventoryForm">
+            <div class="input-row">
+              <label>Product Name</label>
+              <input type="text" id="invProduct" required />
+
+              <label>Stock Quantity</label>
+              <input type="number" id="invStock" min="1" required />
+
+              <label>Cost Price (₹)</label>
+              <input type="number" id="invCost" min="0" />
+
+
+            </div>
+            <button class="addUpdate-btn">Add / Update</button>
+            <p id="invMsg"></p>
+          </form>
+        </div>
+
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Stock</th>
+              <th>Cost Price</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTable"></tbody>
+        </table>
+      </div>
+
 
 
     </div>

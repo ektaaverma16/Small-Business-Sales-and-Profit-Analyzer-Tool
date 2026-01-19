@@ -6,7 +6,7 @@ const token = localStorage.getItem("jwtToken");
 if (!token) {
   alert("Session expired. Please login again.");
   window.location.href = "login.html";
-    throw new Error("No token"); // ⬅️ THIS LINE IS CRITICAL
+    throw new Error("No token"); 
 
 }
 
@@ -88,7 +88,7 @@ if (user.role === "Employee") document.body.classList.add("role-employee");
 // =============================
 function applyRoleVisibility(role) {
 
-  // 1️⃣ Hide ONLY navigation items
+  //  Hide ONLY navigation items
   document
     .querySelectorAll(".navigation .owner-only, .navigation .manager-only, .navigation .employee-only")
     .forEach(el => el.style.display = "none");
@@ -108,14 +108,24 @@ function applyRoleVisibility(role) {
       .forEach(el => el.style.display = "block");
   }
 
-  // 🔒 Hide dashboard charts for Employee ONLY
+   // Owner & Manager → show owner-manager KPI cards
+  document.querySelectorAll(".stat-card.owner-only, .stat-card.manager-only").forEach(card => {
+    card.style.display = (role === "Owner" || role === "Manager") ? "flex" : "none";
+  });
+
+  // Employee → show employee KPI cards
+  document.querySelectorAll(".stat-card.employee-only").forEach(card => {
+    card.style.display = (role === "Employee") ? "flex" : "none";
+  });
+
+  // Hide dashboard charts for Employee ONLY
   if (role === "Employee") {
     document
       .querySelectorAll(".dashboard-card.owner-only, .dashboard-card.manager-only")
       .forEach(el => el.style.display = "none");
   }
 
-  // 2️⃣ Section visibility controlled ONLY by active class
+  // Section visibility controlled ONLY by active class
   document.querySelectorAll(".page-section")
     .forEach(sec => sec.classList.remove("active"));
 
@@ -225,6 +235,10 @@ function showSection(sectionId) {
   if (sectionId === "users") {
     loadUsersTable();
   }
+  if (sectionId === "inventory") {
+  loadInventory();
+}
+
 }
 
 
@@ -443,7 +457,7 @@ document.getElementById("addSalesForm")?.addEventListener("submit", e => {
       document.getElementById("addSalesForm").reset();
 
 
-      showSection("viewSales");   // 👈 FIRST show section
+      showSection("viewSales");   
       loadSalesTable();
       loadSalesForDashboard();
     })
@@ -456,7 +470,7 @@ document.getElementById("addSalesForm")?.addEventListener("submit", e => {
 //***************LOAD SALES*************/
 function loadSalesTable() {
   const section = document.getElementById("viewSales");
-  if (!section.classList.contains("active")) return; // 🛑 STOP
+  if (!section.classList.contains("active")) return; 
 
   fetch("http://localhost:3000/sales", {
     headers: { Authorization: `Bearer ${token}` }
@@ -539,10 +553,10 @@ document.addEventListener("click", function (e) {
       .then(res => res.json())
       .then(() => {
 
-        // 🔥 FORCE stay on View Sales
+        // FORCE stay on View Sales
         showSection("viewSales");
 
-        // ⏱ wait for DOM to be visible, THEN load table
+        // wait for DOM to be visible, THEN load table
         setTimeout(() => {
           loadSalesTable();
           refreshKPIsOnly();
@@ -560,6 +574,62 @@ function logout() {
 
 
 
+// ================= INVENTORY =================
+function loadInventory() {
+  fetch("http://localhost:3000/inventory", {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+    .then(res => res.json())
+    .then(items => {
+      const tbody = document.getElementById("inventoryTable");
+      if (!tbody) return;
+
+      tbody.innerHTML = "";
+
+      items.forEach(i => {
+        const status =
+          i.stock === 0
+            ? "Out of Stock"
+            : i.stock < 5
+              ? "Low Stock"
+              : "In Stock";
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${i.product}</td>
+            <td>${i.stock}</td>
+            <td>₹${i.costPrice}</td>
+            <td>${status}</td>
+          </tr>
+        `;
+      });
+    });
+}
+
+// Add inventory
+document.getElementById("inventoryForm")?.addEventListener("submit", e => {
+  e.preventDefault();
+
+  fetch("http://localhost:3000/inventory/add", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      product: invProduct.value,
+      stock: invStock.value,
+      costPrice: invCost.value
+    })
+  })
+    .then(res => res.json())
+    .then(() => {
+      invMsg.innerText = "Inventory updated";
+      invMsg.style.color = "green";
+      inventoryForm.reset();
+      loadInventory();
+    });
+});
 
 
 

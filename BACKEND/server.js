@@ -7,6 +7,7 @@ const verifyToken = require("./middleware/auth");
 const path = require("path");
 
 
+
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
@@ -146,6 +147,7 @@ function loadSales() {
  
 
 // Save sales
+
 function saveSales(sales) {
   fs.writeFileSync(SALES_FILE, JSON.stringify(sales, null, 2));
 }
@@ -174,6 +176,17 @@ app.post("/sales/add", verifyToken, (req, res) => {
   };
 
   sales.push(newSale);
+
+  // 🔻 Reduce inventory stock
+const inventory = loadInventory();
+const item = inventory.find(i => i.product === product);
+
+if (item) {
+  item.stock -= Number(quantity);
+  if (item.stock < 0) item.stock = 0;
+  saveInventory(inventory);
+}
+
   saveSales(sales);
 
     console.log("Sale saved:", newSale);
@@ -235,6 +248,80 @@ app.delete("/sales/:id", verifyToken, (req, res) => {
   console.log("Sale deleted:", sale);
   res.json({ message: "Sale deleted successfully" });
 });
+
+// ================= INVENTORY =================
+
+
+const INVENTORY_FILE = path.join(__dirname, "inventory.json");
+
+// Load inventory
+function loadInventory() {
+  if (!fs.existsSync(INVENTORY_FILE)) {
+    fs.writeFileSync(INVENTORY_FILE, JSON.stringify([], null, 2));
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(INVENTORY_FILE, "utf-8"));
+}
+
+// Save inventory
+function saveInventory(items) {
+  fs.writeFileSync(INVENTORY_FILE, JSON.stringify(items, null, 2));
+}
+
+/* -------- ADD / UPDATE PRODUCT (Owner & Manager) -------- */
+app.post("/inventory/add", verifyToken, (req, res) => {
+
+  console.log("INVENTORY ADD HIT");
+  console.log("USER:", req.user);
+  console.log("BODY:", req.body);
+
+  if (!["Owner", "Manager"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { product, stock, costPrice } = req.body;
+
+  if (!product || Number(stock) <= 0) {
+    return res.status(400).json({ message: "Invalid product or stock" });
+  }
+
+  const inventory = loadInventory();
+
+  const existing = inventory.find(
+    i => i.product === product && i.business === req.user.business
+  );
+
+  if (existing) {
+    existing.stock += Number(stock);
+    if (costPrice != null) {
+      existing.costPrice = Number(costPrice);
+    }
+  } else {
+    inventory.push({
+      id: Date.now(),
+      product,
+      stock: Number(stock),
+      costPrice: Number(costPrice || 0),
+      business: req.user.business
+    });
+  }
+
+  saveInventory(inventory);
+  res.json({ message: "Inventory updated successfully" });
+});
+
+/* -------- VIEW INVENTORY -------- */
+app.get("/inventory", verifyToken, (req, res) => {
+
+  const inventory = loadInventory();
+
+  const businessInventory = inventory.filter(
+    i => i.business === req.user.business
+  );
+
+  res.json(businessInventory);
+});
+
 
 // ================= VIEW ALL USERS (OWNER ONLY) =================
 app.get("/users", verifyToken, (req, res) => {

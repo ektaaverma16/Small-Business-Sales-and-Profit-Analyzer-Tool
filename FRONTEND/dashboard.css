@@ -523,3 +523,52 @@ canvas {
 .barchart.monthlychart h3{
   color: #18407c;
 }
+
+#inventory h2{
+  font-size: 27px;
+  padding-bottom: 12px;
+  font-weight: 800;
+}
+#inverntoryForm{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap; 
+}
+#inventoryForm label {
+  /* display: none; */
+  font-weight: 600;
+}
+#inventoryForm input {
+  width: 30%;
+  padding: 8px;
+  /* margin: 10px; */
+  /* margin-bottom: 10px; */
+}
+.addUpdate-btn{
+  align-self: center;
+  width: 30%;
+  padding: 8px 15px;
+  background-color: #1450aa;
+}
+
+#addSalesForm{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap; 
+}
+.addSales-btn{
+    /* align-self: center; */
+  width: 18%;
+  padding: 8px 15px;
+  background-color: #1450aa;
+}
+
+.buttonWrapper {
+  width: 100%;
+  margin-top: 10px;
+}
+#users,#addSales,#viewSales,#myTasks,#inventory{
+  padding-left: 50px;
+}

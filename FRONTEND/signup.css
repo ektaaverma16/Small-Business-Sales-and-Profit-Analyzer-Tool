@@ -58,8 +58,8 @@ body {
 .signup-card {
   background: #ffffff;
   width: 360px;     
-  height: 660px;          /* 🔽 reduced */
-  padding: 20px 25px;              /* 🔽 reduced */
+  height: 660px;          
+  padding: 20px 25px;              
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(50, 50, 93, 0.1);
 }
@@ -80,7 +80,7 @@ label {
 input,
 select {
   width: 100%;
-  padding: 10px;              /* 🔽 reduced */
+  padding: 10px;              
   margin: 6px 0 12px;
   border-radius: 6px;
   border: 1px solid #d9dce1;
@@ -96,7 +96,7 @@ select:focus {
 /* PRIMARY BUTTON */
 .primary-btn {
   width: 100%;
-  padding: 11px;              /* 🔽 reduced */
+  padding: 11px;              
   background: #0E21A0;
   color: white;
   border: none;
