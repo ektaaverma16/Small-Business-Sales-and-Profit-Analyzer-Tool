@@ -24,12 +24,21 @@
   <div class="container">
     <div class="navigation">
       <ul>
+        <!-- APP TITLE -->
         <li>
           <a href="#">
             <span class="icon"></span>
             <span class="title">Analyzer</span>
           </a>
         </li>
+
+        <!-- BUSINESS INFO -->
+        <div class="business-info">
+         <div id="sidebarBusinessType"></div>
+  <div id="sidebarBusinessId"></div>
+        </div>
+
+        <!-- MENU ITEMS -->
         <li>
           <a href="javascript:void(0)" onclick="showSection('dashboard')">
             <span class="icon"><ion-icon name="home-outline"></ion-icon></span>
@@ -206,11 +215,11 @@
                 <option value="Completed">Completed</option>
                 <option value="Pending">Pending</option>
               </select>
-              
+
             </div>
             <div class="buttonWrapper">
-            <button  type="submit" class="addSales-btn">Add Sale</button>
-            <p id="salesMsg"></p>
+              <button type="submit" class="addSales-btn">Add Sale</button>
+              <p id="salesMsg"></p>
             </div>
           </form>
         </div>

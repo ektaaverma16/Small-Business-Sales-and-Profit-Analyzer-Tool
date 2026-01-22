@@ -572,3 +572,30 @@ canvas {
 #users,#addSales,#viewSales,#myTasks,#inventory{
   padding-left: 50px;
 }
+/* ============================
+   BUSINESS INFO (SIDEBAR)
+============================= */
+
+.business-info {
+  margin: 12px 16px 20px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.biz-type {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.biz-id {
+  display: block;
+  font-size: 12px;
+  color: #ffd166;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}

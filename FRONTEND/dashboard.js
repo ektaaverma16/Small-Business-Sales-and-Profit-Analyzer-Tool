@@ -6,9 +6,23 @@ const token = localStorage.getItem("jwtToken");
 if (!token) {
   alert("Session expired. Please login again.");
   window.location.href = "login.html";
-    throw new Error("No token"); 
-
+  throw new Error("No token");
 }
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+
+// TOP BAR
+document.getElementById("userName").innerText = payload.username;
+document.getElementById("userRole").innerText = payload.role;
+
+// SIDEBAR BUSINESS INFO
+document.getElementById("sidebarBusinessType").innerText =
+  `businessType: "${payload.businessType}"`;
+
+document.getElementById("sidebarBusinessId").innerText =
+  `businessId: "${payload.businessId}"`;
+
+
 
 
 // =============================

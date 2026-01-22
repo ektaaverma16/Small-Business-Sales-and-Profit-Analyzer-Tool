@@ -27,46 +27,127 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
+/***************Generate Business ID*******************/
+function generateBusinessId(businessType) {
+  const prefix = businessType.split(" ")[0].toUpperCase().slice(0, 3);
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}-${random}`;
+}
+
+
 /* ----------------- REGISTER-------------------  */
 app.post("/register", (req, res) => {
-  const { username, password, role, business } = req.body;
+  const { username, password, role, businessType, businessId } = req.body;
   let users = loadUsers();
 
-  //  Check if user already exists
+  // ❌ Duplicate username not allowed
   if (users.find(u => u.username === username)) {
     return res.status(400).json({ message: "User already exists" });
   }
 
-  // Save new user
-  const newUser = { username, password, role, business };
+  let finalBusinessId = businessId;
+
+  // ================= OWNER =================
+  if (role === "Owner") {
+    if (!businessType) {
+      return res.status(400).json({ message: "Business type is required" });
+    }
+
+    // Generate Business ID: RE-1023
+    const prefix = businessType.substring(0, 2).toUpperCase();
+    const unique = Date.now().toString().slice(-4);
+    finalBusinessId = `${prefix}-${unique}`;
+  }
+
+  // ================= NON-OWNER =================
+  else {
+    if (!businessId) {
+      return res.status(400).json({ message: "Business ID required" });
+    }
+
+    const businessExists = users.find(
+      u =>
+        u.businessId === businessId &&
+        u.businessType === businessType &&
+        u.role === "Owner"
+    );
+
+    if (!businessExists) {
+      return res.status(400).json({ message: "Invalid Business ID" });
+    }
+  }
+
+  // ================= SAVE USER =================
+  const newUser = {
+    username,
+    password,
+    role,
+    businessType,
+    businessId: finalBusinessId
+  };
+
   users.push(newUser);
   saveUsers(users);
 
-  // Generate JWT token
+  // ================= TOKEN =================
   const token = jwt.sign(
-    { username, role, business },
+    {
+      username,
+      role,
+      businessType,
+      businessId: finalBusinessId
+    },
     SECRET_KEY,
     { expiresIn: "1h" }
   );
 
-  // 📤 Send token back
   res.json({
     message: "Registration successful",
-    token
+    token,
+    businessType,
+    businessId: finalBusinessId
   });
 });
 
 
+
 /* ----------------- LOGIN --------------- */
 app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  let users = loadUsers();
+  const { username, password, role, businessId } = req.body;
+  const users = loadUsers();
 
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user) return res.status(401).json({ message: "Invalid credentials" });
+  let user;
+
+  if (role === "Owner") {
+    // OWNER LOGIN (NO BUSINESS ID)
+    user = users.find(
+      u =>
+        u.username === username &&
+        u.password === password &&
+        u.role === "Owner"
+    );
+  } else {
+    // EMPLOYEE / MANAGER LOGIN (BUSINESS ID REQUIRED)
+    user = users.find(
+      u =>
+        u.username === username &&
+        u.password === password &&
+        u.role === role &&
+        u.businessId === businessId
+    );
+  }
+
+  if (!user) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
 
   const token = jwt.sign(
-    { username: user.username, role: user.role, business: user.business },
+    {
+      username: user.username,
+      role: user.role,
+      businessType: user.businessType,
+      businessId: user.businessId
+    },
     SECRET_KEY,
     { expiresIn: "1h" }
   );
@@ -74,25 +155,27 @@ app.post("/login", (req, res) => {
   res.json({ token });
 });
 
+
+
 /*----------------------SIGNUP-------------------------*/
-app.post("/signup", (req, res) => {
-  const { username, password, role, business } = req.body;
+// app.post("/signup", (req, res) => {
+//   const { username, password, role, business } = req.body;
 
   // Save in JSON file or DB
-  const users = require("./users.json");
+//   const users = require("./users.json");
 
-  const userExists = users.find(u => u.username === username);
-  if (userExists) {
-    return res.json({ success: false, message: "User already exists" });
-  }
+//   const userExists = users.find(u => u.username === username);
+//   if (userExists) {
+//     return res.json({ success: false, message: "User already exists" });
+//   }
 
-  users.push({ username, password, role, business });
+//   users.push({ username, password, role, business });
 
-  const fs = require("fs");
-  fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
+//   const fs = require("fs");
+//   fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
 
-  res.json({ success: true });
-});
+//   res.json({ success: true });
+// });
 
 
 /* ----------------- ROLE PROTECTION ------------------ */

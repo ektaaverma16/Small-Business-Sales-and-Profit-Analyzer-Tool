@@ -1,56 +1,9 @@
 [
   {
-    "username": "admin",
-    "password": "56789",
-    "role": "Owner",
-    "business": "Textiles"
-  },
-  {
-    "username": "Harry",
-    "password": "1234",
-    "role": "Customer",
-    "business": "Shop"
-  },
-  {
-    "username": "somi",
-    "password": "123",
-    "role": "Manager",
-    "business": "Retail"
-  },
-  {
-    "username": "shreya897",
-    "password": "0000",
-    "role": "Employee",
-    "business": "IT / Software"
-  },
-  {
-    "username": "ektaa",
-    "password": "16",
-    "role": "Employee",
-    "business": "Textiles"
-  },
-  {
-    "username": "Ekta16",
+    "username": "ekta@16",
     "password": "1628",
     "role": "Owner",
-    "business": "Retail"
-  },
-  {
-    "username": "sam",
-    "password": "456",
-    "role": "Manager",
-    "business": "Retail"
-  },
-  {
-    "username": "robert21",
-    "password": "147",
-    "role": "Owner",
-    "business": "IT / Software"
-  },
-  {
-    "username": "raj90@",
-    "password": "159",
-    "role": "Owner",
-    "business": "Education"
+    "businessType": "Textiles",
+    "businessId": "TE-1742"
   }
 ]

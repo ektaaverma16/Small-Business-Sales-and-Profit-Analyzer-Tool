@@ -5,5 +5,12 @@
     "stock": 10,
     "costPrice": 2000,
     "business": "Retail"
+  },
+  {
+    "id": 1768834167365,
+    "product": "Speaker",
+    "stock": 15,
+    "costPrice": 2000,
+    "business": "Manufacturing"
   }
 ]

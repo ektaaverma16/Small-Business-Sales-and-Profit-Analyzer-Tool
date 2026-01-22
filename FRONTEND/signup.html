@@ -59,6 +59,11 @@
                     <option value="Healthcare">Healthcare</option>
                     <option value="Education">Education</option>
                 </select>
+                <div id="businessIdWrapper" style="display:none">
+                    <label>Business ID</label>
+                    <input type="text" id="businessId" placeholder="Enter Business ID">
+                </div>
+
 
                 <button type="submit" class="primary-btn">
                     Create account
@@ -106,7 +111,7 @@
 
         document.getElementById("result").style.color = "green";
         document.getElementById("result").innerText =
-        "Signup successful! Redirecting... ✅";
+        "Signup successful! Redirecting... ";
 
 
               // GO DIRECTLY TO DASHBOARD
@@ -116,12 +121,25 @@
       } else {
         document.getElementById("result").style.color = "red";
         document.getElementById("result").innerText =
-          data.message || "Signup failed ❌";
+          data.message || "Signup failed ";
       }
     };
   </script> -->
 
     <script>
+        const roleSelect = document.getElementById("role");
+        const businessIdWrapper = document.getElementById("businessIdWrapper");
+        const businessIdInput = document.getElementById("businessId");
+
+        roleSelect.addEventListener("change", () => {
+            if (roleSelect.value === "Owner") {
+                businessIdWrapper.style.display = "none";
+                businessIdInput.value = "";
+            } else {
+                businessIdWrapper.style.display = "block";
+            }
+        });
+
         document.getElementById("signupForm").addEventListener("submit", async function (e) {
             e.preventDefault();
 
@@ -131,38 +149,53 @@
             const password = document.getElementById("password").value;
             const role = document.getElementById("role").value;
             const business = document.getElementById("business").value;
+            const businessId = document.getElementById("businessId").value.trim();
+
 
             // BASIC VALIDATION
             if (!username || !fullname || !password || !role || !business) {
                 alert("Please fill in all fields.");
                 return;
             }
+            if (role !== "Owner" && !businessId) {
+                alert("Business ID is required for this role");
+                return;
+            }
+
 
             try {
                 const response = await fetch("http://localhost:3000/register", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, fullname, password, role, business })
+                    body: JSON.stringify({
+                        username,
+                        fullname,
+                        password,
+                        role,
+                        businessType: business,
+                        businessId: role === "Owner" ? null : businessId
+                    })
+
                 });
 
                 const data = await response.json();
 
                 const resultEl = document.getElementById("result");
 
-                if (response.ok) {
-                    // SAVE TOKEN
+                if (data.token) {
                     localStorage.setItem("jwtToken", data.token);
 
-                    // SUCCESS MESSAGE
                     resultEl.style.color = "green";
-                    resultEl.innerText = "Signup successful! Redirecting... ✅";
+                    resultEl.innerText = "Signup successful! Redirecting... ";
 
-                    // REDIRECT TO DASHBOARD
-                    setTimeout(() => window.location.href = "dashboard.html", 1000);
+                    setTimeout(() => {
+                        window.location.href = "dashboard.html";
+                    }, 800);
                 } else {
                     resultEl.style.color = "red";
-                    resultEl.innerText = data.message || "Signup failed ❌";
+                    resultEl.innerText = data.message || "Signup failed ";
                 }
+
 
             } catch (error) {
                 console.error(error);

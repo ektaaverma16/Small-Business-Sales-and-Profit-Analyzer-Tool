@@ -17,7 +17,7 @@
         <input type="text" id="username" placeholder="Username" required>
         <input type="password" id="password" placeholder="Password" required>
 
-        <!-- NEW -->
+
         <select id="role" required>
           <option value="">Select Role</option>
           <option value="Owner">Owner</option>
@@ -25,17 +25,8 @@
           <option value="Employee">Employee/Staff</option>
           <option value="Accountant">Accountant</option>
         </select>
+        <input type="text" id="businessId" placeholder="Business ID" required />
 
-        <!-- NEW -->
-        <select id="business" required>
-          <option value="">Select Business Type</option>
-          <option value="Retail">Retail</option>
-          <option value="Manufacturing">Manufacturing</option>
-          <option value="IT / Software">IT / Software</option>
-          <option value="Food & Hospitality">Food & Hospitality</option>
-          <option value="Healthcare">Healthcare</option>
-          <option value="Education">Education</option>
-        </select>
 
 
         <button type="submit">Login</button>
@@ -49,43 +40,69 @@
     </div>
   </div>
 
-  <script>
-      console.log("LOGIN JS LOADED ");
+ <script>
+  console.log("LOGIN JS LOADED");
+  const roleSelect = document.getElementById("role");
+  const businessIdInput = document.getElementById("businessId");
 
-    document.getElementById("loginForm").onsubmit = async function (e) {
-      e.preventDefault();
+  // Hide/show Business ID based on role
+  roleSelect.addEventListener("change", () => {
+    if (roleSelect.value === "Owner") {
+      businessIdInput.style.display = "none";
+      businessIdInput.value = "";
+      businessIdInput.required = false;
+    } else {
+      businessIdInput.style.display = "block";
+      businessIdInput.required = true;
+    }
+  });
 
+  document.getElementById("loginForm").onsubmit = async function (e) {
+    e.preventDefault();
+
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const role = document.getElementById("role").value;
+    const businessId = document.getElementById("businessId").value;
+
+    // BUILD PAYLOAD DYNAMICALLY
+    const payload = { username, password, role };
+
+    if (role !== "Owner") {
+      payload.businessId = businessId;
+    }
+
+    try {
       const response = await fetch("http://localhost:3000/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          username: username.value,
-          password: password.value,
-          role: role.value,
-          business: business.value
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
       console.log("LOGIN RESPONSE:", data);
 
-
       if (data.token) {
         localStorage.setItem("jwtToken", data.token);
+
         document.getElementById("result").style.color = "green";
-        document.getElementById("result").innerText = "Login Successful ✅";
+        document.getElementById("result").innerText = "Login Successful";
 
         setTimeout(() => {
           window.location.href = "dashboard.html";
-        }, 1000);
+        }, 800);
       } else {
         document.getElementById("result").style.color = "red";
-        document.getElementById("result").innerText = "Invalid Credentials ❌";
+        document.getElementById("result").innerText = "Invalid Credentials";
       }
-    };
-  </script>
+
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Server error");
+    }
+  };
+</script>
+
 
 </body>
 
