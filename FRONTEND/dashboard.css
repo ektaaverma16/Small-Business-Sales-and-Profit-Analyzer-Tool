@@ -29,8 +29,22 @@ body{
     position: fixed;
     width: 300px;
     height: 100%;
-    background: var(--blue);
-    border-left: 10px solid var(--blue);
+   background: linear-gradient(
+    135deg,
+    #3E2A21 0%,
+    #4B352A 35%,
+    #CA7842 100%
+  );
+
+
+
+
+    border-left: 10px solid linear-gradient(
+    135deg,
+    #3E2A21 0%,
+    #4B352A 35%,
+    #CA7842 100%
+  );;
     transition: 0.5s;
     overflow: hidden;
      top: 0;
@@ -69,7 +83,7 @@ body{
 }
 .navigation ul li:hover a{
 /* .navigation ul li:hovered a{ */
-    color: var(--blue);
+    color: #3E2A21;
 }
 .navigation ul li a .icon
 {
@@ -130,7 +144,6 @@ body{
   position: relative;
   width: calc(100% - 300px);
   left: 300px;
-  /* top: 5px; */
   min-height: 100vh;
   background: var(--white);
   transition: 0.5s;
@@ -141,15 +154,31 @@ body{
   left: 70px;
 }
 
+.business-bg {
+  position: absolute;
+  top: 60px;                /* below topbar */
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 60px);
+background-color: #fff;
+  /* background-image: url("./bake.jpg"); */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  opacity: 0.18;            /* reduced for clarity */
+  z-index: 0;
+  pointer-events: none;
+}
+
 
 
 .topbar {
-   background: linear-gradient(
-    to right,
-    #123c7b 0%,
-    #4A70A9 30%,
-    #000000 90%
-  
+    background: linear-gradient(
+    135deg,
+    #3E2A21 0%,
+    #4B352A 35%,
+    #CA7842 100%
   );
   width: 100%;
   height: 60px;
@@ -157,6 +186,7 @@ body{
   justify-content: space-between;
   align-items:center;
   padding: 0 5px;
+  z-index: 3;
 
 }
 #userName{
@@ -215,14 +245,6 @@ body{
 /* -----------------------------
    SIDEBAR
 ------------------------------*/
-
-
-
-
-
-
-
-
 .nav-item {
   display: block;
   padding: 12px 16px;
@@ -241,16 +263,6 @@ body{
   background: rgba(255, 255, 255, 0.25);
 }
 
-
-
-
-/* -----------------------------
-   MAIN CONTENT
-------------------------------*/
-
-
-
-
 /* -----------------------------
    PAGE SECTIONS
 ------------------------------*/
@@ -265,6 +277,7 @@ body{
 
   overflow-y: auto;   /* scroll ONLY inside active section */
   display: none;
+  z-index: 2;
 }
 
 .page-section.active {
@@ -598,4 +611,662 @@ canvas {
   color: #ffd166;
   font-weight: 600;
   letter-spacing: 0.4px;
+}
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background: white;
+  width: 350px;
+  padding: 20px;
+  margin: 10% auto;
+  border-radius: 8px;
+}
+.production-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  background: #fff;
+}
+
+.production-table th,
+.production-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.production-table th {
+  background-color: #f4f6f8;
+  font-weight: 600;
+}
+
+.production-table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.production-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* =========================
+   PRODUCTION HISTORY EDIT BUTTON
+========================= */
+#productionHistoryTable button {
+  padding: 6px 14px;
+  background-color: #f6f20a;
+  color: #000000;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+#productionHistoryTable button:hover {
+  background-color: #ebdb25da;
+  transform: translateY(-1px);
+}
+
+/* Active */
+#productionHistoryTable button:active {
+  transform: translateY(0);
+}
+
+/* Disabled (future-proof) */
+#productionHistoryTable button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* =========================
+   EDIT MODAL OVERLAY
+========================= */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================
+   MODAL BOX
+========================= */
+.modal-content {
+  background: #ffffff;
+  width: 420px;
+  max-width: 92%;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.25s ease;
+}
+
+/* =========================
+   MODAL HEADER
+========================= */
+.modal-content h3 {
+  margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  text-align: center;
+}
+
+/* =========================
+   FORM GROUP
+========================= */
+.modal-content label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+.modal-content input,
+.modal-content textarea {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus {
+  border-color: #4f46e5;
+  outline: none;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Save Button */
+.modal-actions .btn-save {
+  background: #4f46e5;
+  color: white;
+}
+
+.modal-actions .btn-save:hover {
+  background: #4338ca;
+}
+
+/* Cancel Button */
+.modal-actions .btn-cancel {
+  background: #e5e7eb;
+  color: #333;
+}
+
+.modal-actions .btn-cancel:hover {
+  background: #d1d5db;
+}
+
+/* =========================
+   ANIMATION
+========================= */
+@keyframes slideDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* .stat-card,
+.activity-table,
+.production-table,
+.card {
+  background: rgba(255, 255, 255, 0.55);  /* semi-transparent */
+  /* backdrop-filter: blur(10px); */
+  /* -webkit-backdrop-filter: blur(10px); */
+
+  /* border: 1px solid rgba(255, 255, 255, 0.35); */
+  /* box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}  */
+
+#showProductionFormBtn {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#showProductionFormBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+}
+
+#showProductionFormBtn:active {
+  transform: scale(0.97);
+}
+
+#production {
+  background: #ffffff;
+  padding: 22px;
+  margin-top: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  animation: fadeSlideIn 0.4s ease;
+}
+#production h3 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#production input,
+#production select,
+#production textarea {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+#production input:focus,
+#production select:focus,
+#production textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+#production button[type="submit"] {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#production button[type="submit"]:hover {
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
+  transform: translateY(-1px);
+}
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.low-stock-alert {
+  background: #ffe5e5;
+  color: #b30000;
+  padding: 12px 16px;
+  margin-bottom: 15px;
+  border-left: 5px solid #ff3b3b;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.status-ok {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.status-low {
+  color: #ff9800;
+  font-weight: bold;
+}
+
+.status-out {
+  color: #d32f2f;
+  font-weight: bold;
+  background: rgba(211, 47, 47, 0.1);
+}
+.add-stock-btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  background: #ff5252;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.add-stock-btn:hover {
+  background: #e53935;
+}
+.hidden {
+  display: none !important;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* ================= INVENTORY ACTION BUTTONS ================= */
+
+.edit-btn,
+.delete-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.edit-btn {
+  background-color: #eef3ff;
+  color: #1f3c88;
+  border: 1px solid #cdd8ff;
+}
+
+.edit-btn:hover {
+  background-color: #dbe4ff;
+}
+
+.delete-btn {
+  background-color: #ffecec;
+  color: #c0392b;
+  border: 1px solid #f5c2c2;
+}
+
+.delete-btn:hover {
+  background-color: #fbd5d5;
+}
+/* ================= INVENTORY FORM ================= */
+
+#inventoryFormWrapper {
+  margin-top: 25px;
+}
+
+#inventoryFormWrapper .card {
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  max-width: 700px;
+}
+
+#inventoryForm .input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+}
+
+#inventoryForm label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+#inventoryForm input,
+#inventoryForm select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+#inventoryForm input:focus,
+#inventoryForm select:focus {
+  outline: none;
+  border-color: #5a2d0c;
+}
+
+
+
+#invMsg {
+  margin-top: 10px;
+  font-size: 14px;
+}
+.btn-row {
+  width: 100%;
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;   /* center button */
+}
+
+.addUpdate-btn {
+  width: auto;
+  padding: 10px 28px;
+
+  background: #1e4fa3;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.addUpdate-btn:hover {
+  background: #163d80;
+}
+
+.activity-table td:last-child {
+  white-space: nowrap;
+}
+
+/* ================= VIEW SALES TABLE ================= */
+
+#viewSales {
+  padding: 20px;
+}
+
+#viewSales h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+  color: #3a2a20;
+}
+
+/* Table wrapper */
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* Header */
+.sales-table thead {
+  background: linear-gradient(135deg, #7b4a2e, #a76a43);
+}
+
+.sales-table thead th {
+  color: #fff;
+  padding: 14px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Body cells */
+.sales-table tbody td {
+  padding: 12px 10px;
+  font-size: 14px;
+  text-align: center;
+  color: #000000;
+  border-bottom: 1px solid #eee;
+}
+
+/* Zebra rows */
+.sales-table tbody tr:nth-child(even) {
+  background-color: #faf6f2;
+}
+
+/* Hover effect */
+.sales-table tbody tr:hover {
+  background-color: #fff1e6;
+}
+
+/* Amount emphasis */
+.sales-table td:nth-child(6) {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+/* ================= ACTION BUTTONS ================= */
+
+.activity-table td:last-child {
+  white-space: nowrap;
+}
+
+/* ALL buttons */
+.activity-table td:last-child button {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+/* FIRST button → Invoice */
+.activity-table td:last-child button:first-child {
+  background: #4caf50;
+  color: #fff;
+}
+
+.activity-table td:last-child button:first-child:hover {
+  background: #43a047;
+}
+
+/* SECOND button → Delete */
+.activity-table td:last-child button:last-child {
+  background: #e53935;
+  color: #fff;
+}
+
+.activity-table td:last-child button:last-child:hover {
+  background: #c62828;
+}
+
+/* Space between buttons */
+.activity-table td:last-child button + button {
+  margin-left: 6px;
+}
+
+/* ================= EMPTY / ERROR ================= */
+
+#salesError {
+  margin-top: 14px;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1000px) {
+  .sales-table {
+    font-size: 13px;
+  }
+
+  .sales-table thead {
+    display: none;
+  }
+
+  .sales-table tbody tr {
+    display: block;
+    margin-bottom: 14px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  }
+
+  .sales-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: none;
+  }
+
+  .sales-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6d4c41;
+  }
+}
+/* ================= ACTION COLUMN ================= */
+
+.sales-table td:last-child {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ================= INVOICE BUTTON ================= */
+
+.sales-table td:last-child button {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+
+  background: rgb(0, 213, 255);
+  color: #ffffff;
+
+  transition: all 0.2s ease;
+}
+
+.sales-table td:last-child button:hover {
+  background: rgb(0, 195, 255);
+  transform: translateY(-1px);
+  /* box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35); */
+}
+
+.sales-table td:last-child button:active {
+  transform: scale(0.96);
+}
+
+/* ================= DELETE ICON ================= */
+
+.sales-table .delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 14px;          
+  height: auto;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+  border-radius: 6px;
+
+  background: #dc2626;
+  color: #ffffff;
+
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+.sales-table .delete-btn:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+}
+
+/* Active */
+.sales-table .delete-btn:active {
+  transform: scale(0.97);
 }

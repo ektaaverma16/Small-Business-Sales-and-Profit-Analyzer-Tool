@@ -1,0 +1,12 @@
+[
+  {
+    "batchId": "BATCH-1769347150398",
+    "product": "Bread",
+    "quantity": 3,
+    "producedBy": "sam12",
+    "production_date": "2026-01-25T00:00:00.000Z",
+    "expiry_date": "2026-01-27T00:00:00.000Z",
+    "status": "PENDING_APPROVAL",
+    "notes": ""
+  }
+]

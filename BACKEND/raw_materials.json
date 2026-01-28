@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Flour",
+    "stock": 99
+  },
+  {
+    "name": "Yeast",
+    "stock": 19.9
+  },
+  {
+    "name": "Salt",
+    "stock": 9.96
+  }
+]

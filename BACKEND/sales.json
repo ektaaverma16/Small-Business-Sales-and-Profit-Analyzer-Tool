@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": 1769601932970,
+    "itemType": "pastries",
+    "product": "Black Forest",
+    "quantity": 2,
+    "unitPrice": 80,
+    "total": 160,
+    "saleType": "Counter Sale",
+    "paymentMode": "Cash",
+    "date": "2026-01-28T12:05:32.962Z",
+    "status": "Completed",
+    "addedBy": "sam12",
+    "business": "MA-2818"
+  }
+]

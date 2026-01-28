@@ -12,5 +12,36 @@
     "stock": 15,
     "costPrice": 2000,
     "business": "Manufacturing"
+  },
+  {
+    "id": 1769347150397,
+    "product": "Bread",
+    "stock": 2,
+    "costPrice": 0
+  },
+  {
+    "id": 1769510621230,
+    "product": "sugar",
+    "stock": 15,
+    "costPrice": 400,
+    "business": "MA-2818",
+    "unit": "kg",
+    "minStock": 5
+  },
+  {
+    "id": 1769511055034,
+    "product": "butter",
+    "stock": 500,
+    "costPrice": 700,
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769511671232,
+    "product": "flour",
+    "stock": 18,
+    "costPrice": 450,
+    "business": "MA-2818",
+    "unit": "kg",
+    "minStock": 5
   }
 ]

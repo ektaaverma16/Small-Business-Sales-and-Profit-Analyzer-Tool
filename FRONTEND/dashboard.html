@@ -34,8 +34,8 @@
 
         <!-- BUSINESS INFO -->
         <div class="business-info">
-         <div id="sidebarBusinessType"></div>
-  <div id="sidebarBusinessId"></div>
+          <div id="sidebarBusinessType"></div>
+          <div id="sidebarBusinessId"></div>
         </div>
 
         <!-- MENU ITEMS -->
@@ -104,6 +104,9 @@
           <!-- <button class="logout-btn" onclick="logout()">Logout</button> -->
         </div>
       </div>
+
+      <!--  BUSINESS BACKGROUND IMAGE -->
+      <div class="business-bg"></div>
       <!-- ================= DASHBOARD (SAME FOR ALL) ================= -->
       <div id="dashboard" class="page-section active">
         <!-- <h2>Dashboard</h2> -->
@@ -136,23 +139,113 @@
           <!-- ================= EMPLOYEE KPIs ================= -->
 
           <div class="stat-card employee-only">
-            <h4 class="statName">Sales Today</h4>
+            <h4 class="statName">Today's Sales</h4>
             <p class="stat-value" id="empSalesToday">₹0</p>
           </div>
 
           <div class="stat-card employee-only">
-            <h4 class="statName">Total Orders</h4>
-            <p class="stat-value" id="empTotalOrders">0</p>
+            <h4 class="statName">Items Sold Today</h4>
+            <p class="stat-value" id="empItemsSoldToday">0</p>
           </div>
 
           <div class="stat-card employee-only">
-            <h4 class="statName">Pending Amount</h4>
-            <p class="stat-value" id="empPendingAmount">₹0</p>
+            <h4 class="statName">Today's Production</h4>
+            <p class="stat-value" id="empTodayProduction">0</p>
+          </div>
+        </div>
+
+        <!-------MY PRODUCTION HISTORY -->
+        <section class="production-history employee-only">
+          <h3>My Production History</h3>
+
+          <table id="productionHistoryTable" class="production-table">
+            <thead>
+              <tr>
+                <th>Batch ID</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Production Date</th>
+                <th>Status</th>
+                <th>Expiry Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- JS rows go here -->
+            </tbody>
+          </table>
+
+        </section>
+
+        <button id="showProductionFormBtn" class="btn btn-primary " style="margin-bottom: 15px;">
+          ➕ Add New Production
+        </button>
+
+
+        <!-- EDIT PRODUCTION MODAL -->
+        <div id="editModal" class="modal" style="display: none">
+          <div class="modal-content">
+            <h3>Edit Production Batch</h3>
+
+            <input type="hidden" id="editBatchId" />
+
+            <label>Quantity</label>
+            <input type="number" id="editQuantity" />
+
+            <label>Notes</label>
+            <textarea id="editNotes" rows="3"></textarea>
+
+            <div class="modal-actions">
+              <button class="btn-save" onclick="submitEdit()">Save</button>
+              <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+
+
+
+        <!-- ================= DAILY PRODUCTION ENTRY ================= -->
+        <div id="production" class="employee-only">
+
+          <h2>🧁 Daily Production Entry</h2>
+
+          <div class="card">
+            <form id="productionForm">
+              <div class="salesInput">
+
+                <label>Product</label>
+                <select id="prodProduct" required>
+                  <option value="">Select Product</option>
+                  <option value="Bread">Bread</option>
+                  <option value="Cake">Cake</option>
+                  <option value="Bun">Bun</option>
+                </select>
+
+                <label>Quantity Produced</label>
+                <input type="number" id="prodQuantity" min="1" required />
+
+                <label>Production Date</label>
+                <input type="date" id="prodDate" required />
+
+                <label>Notes (Optional)</label>
+                <input type="text" id="prodNotes" placeholder="Morning batch" />
+
+              </div>
+
+              <div class="buttonWrapper">
+                <button type="submit" class="addSales-btn">Submit Production</button>
+                <p id="prodMsg"></p>
+              </div>
+            </form>
           </div>
 
         </div>
 
 
+
+
+        <!-- ================= CHARTS ================= -->
 
         <!-- PROFIT & LOSS BAR CHART -->
         <div class="dashboard-card owner-only manager-only chart-card">
@@ -173,56 +266,99 @@
         <p id="status"></p>
       </div>
 
-      <!-- ================= VIEW SALES ================= -->
-      <div id="viewSales" class="page-section owner-only manager-only employee-only">
 
-        <h2>Sales List</h2>
-        <table class="activity-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Product</th>
-              <th>Qty</th>
-              <th>Price</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Added By</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="salesTableBody"></tbody>
-        </table>
-        <p id="salesError"></p>
-      </div>
+     <!-- ================= VIEW SALES ================= -->
+<div id="viewSales" class="page-section owner-only manager-only employee-only">
+
+  <h2>Sales List</h2>
+
+  <table class="sales-table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Product</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Total</th>
+        <th>Sale Type</th>
+        <th>Payment</th>
+        <th class="empName">Added By</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody id="salesTableBody">
+      <!-- Rows injected by JS -->
+    </tbody>
+  </table>
+
+  <p id="salesError"></p>
+</div>
+
 
       <!-- ================= ADD SALES ================= -->
       <div id="addSales" class="page-section employee-only">
         <h2>Add Sales</h2>
-        <div class="card">
-          <form id="addSalesForm">
-            <div class="salesInput">
-              <label>Product Name</label>
-              <input type="text" id="productName" required />
 
-              <label>Quantity</label>
-              <input type="number" id="quantity" min="1" required />
+        <form id="addSalesForm">
 
-              <label>Price per Unit (₹)</label>
-              <input type="number" id="price" min="1" required />
+          <!-- ITEM TYPE -->
+          <label>Item Type</label>
+          <select id="itemType" required>
+            <option value="">Select Category</option>
+            <option value="cakes">🍰 Cakes</option>
+            <option value="pastries">🧁 Pastries & Desserts</option>
+            <option value="breads">🥐 Breads & Buns</option>
+            <option value="savory">🥟 Savory Items</option>
+            <option value="cookies">🍪 Cookies</option>
+          </select>
 
-              <label>Payment Status</label>
-              <select id="paymentStatus" required>
-                <option value="Completed">Completed</option>
-                <option value="Pending">Pending</option>
-              </select>
+          <!-- ITEM NAME -->
+          <label>Item Name</label>
+          <input type="text" id="productName" placeholder="Enter product name" required />
 
-            </div>
-            <div class="buttonWrapper">
-              <button type="submit" class="addSales-btn">Add Sale</button>
-              <p id="salesMsg"></p>
-            </div>
-          </form>
-        </div>
+          <!-- QUANTITY -->
+          <label>Quantity</label>
+          <input type="number" id="quantity" min="1" required />
+
+          <!-- UNIT PRICE -->
+          <label>Unit Price (₹)</label>
+          <input type="number" id="unitPrice" min="0" step="0.01" required />
+
+          <!-- TOTAL AMOUNT -->
+          <label>Total Amount (₹)</label>
+          <input type="number" id="totalAmount" readonly />
+
+          <!-- SALE TYPE -->
+          <label>Sale Type</label>
+          <select id="saleType" required>
+            <option value="Counter Sale">Counter Sale</option>
+            <option value="Online Order">Online Order</option>
+            <option value="Bulk Order">Bulk Order</option>
+            <option value="Custom Order">Custom Order</option>
+          </select>
+
+          <!-- PAYMENT MODE -->
+          <label>Payment Mode</label>
+          <select id="paymentMode" required>
+            <option value="Cash">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="Card">Card</option>
+          </select>
+
+          <!-- SOLD BY -->
+          <label>Sold By</label>
+          <input type="text" id="soldBy" readonly />
+          <!-- SALE DATE -->
+          <label>Sale Date</label>
+          <input type="date" id="saleDate" required />
+
+
+          <button type="submit" class="btn-primary">Add Sale</button>
+
+        </form>
+
       </div>
 
       <!-- ================= TASKS ================= -->
@@ -272,36 +408,110 @@
       <div id="inventory" class="page-section owner-only manager-only">
         <h2>Inventory</h2>
 
-        <div class="card">
-          <form id="inventoryForm">
-            <div class="input-row">
-              <label>Product Name</label>
-              <input type="text" id="invProduct" required />
 
-              <label>Stock Quantity</label>
-              <input type="number" id="invStock" min="1" required />
-
-              <label>Cost Price (₹)</label>
-              <input type="number" id="invCost" min="0" />
-
-
-            </div>
-            <button class="addUpdate-btn">Add / Update</button>
-            <p id="invMsg"></p>
-          </form>
-        </div>
 
         <table class="activity-table">
           <thead>
             <tr>
-              <th>Product</th>
+              <th>Raw Material</th>
               <th>Stock</th>
+              <th>Unit</th>
+              <th>Min Level</th>
               <th>Cost Price</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="inventoryTable"></tbody>
         </table>
+
+        <div class="inventory-actions">
+          <button class="add-stock-btn" onclick="openAddStock('')">
+            ➕ Add Stock
+          </button>
+        </div>
+
+
+        <!-- EDIT INVENTORY MODAL -->
+        <div id="editInventoryModal" class="modal hidden">
+          <div class="modal-content">
+            <h3>Edit Inventory</h3>
+
+            <input type="hidden" id="editId">
+
+            <label>Stock Quantity</label>
+            <input type="number" id="editStock">
+
+            <label>Unit</label>
+            <select id="editUnit">
+              <option value="kg">kg</option>
+              <option value="grams">grams</option>
+              <option value="litre">litre</option>
+            </select>
+
+            <label>Minimum Stock</label>
+            <input type="number" id="editMinStock">
+
+            <label>Cost Price</label>
+            <input type="number" id="editCostPrice">
+
+            <div class="modal-actions">
+              <button type="button" onclick="closeEditInventory()">Cancel</button>
+              <button type="button" onclick="saveEditInventory()">Save</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- DELETE INVENTORY MODAL -->
+        <div id="deleteInventoryModal" class="modal hidden">
+          <div class="modal-content">
+            <h3>Delete Inventory</h3>
+            <p>Are you sure you want to delete this item?</p>
+
+            <input type="hidden" id="deleteId">
+
+            <div class="modal-actions">
+              <button type="button" onclick="closeDeleteInventory()">Cancel</button>
+              <button type="button" class="danger" onclick="confirmDelete()">Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="inventoryFormWrapper" style="display: none;">
+
+          <div class="card">
+            <form id="inventoryForm">
+              <div class="input-row">
+                <label>Raw Material Name</label>
+                <input type="text" id="invProduct" placeholder="Sugar, Flour, Butter" required />
+
+                <label>Stock Quantity</label>
+                <input type="number" id="invStock" min="0" required />
+
+                <label>Unit</label>
+                <select id="invUnit" required>
+                  <option value="kg">kg</option>
+                  <option value="grams">grams</option>
+                  <option value="litre">litre</option>
+
+                </select>
+
+                <label>Minimum Stock Level</label>
+                <input type="number" id="invMinStock" min="1" required />
+
+                <label>Cost Price (₹)</label>
+                <input type="number" id="invCost" min="0" />
+              </div>
+              <div class="btn-row">
+                <button type="submit" class="addUpdate-btn">Add / Update Stock</button>
+              </div>
+              <p id="invMsg"></p>
+            </form>
+
+          </div>
+        </div>
+
       </div>
 
 

@@ -5,5 +5,26 @@
     "role": "Owner",
     "businessType": "Textiles",
     "businessId": "TE-1742"
+  },
+  {
+    "username": "shreya18#",
+    "password": "0000",
+    "role": "Employee",
+    "businessType": "Textiles",
+    "businessId": "TE-1742"
+  },
+  {
+    "username": "krati60",
+    "password": "123",
+    "role": "Owner",
+    "businessType": "Manufacturing",
+    "businessId": "MA-2818"
+  },
+  {
+    "username": "sam12",
+    "password": "1010",
+    "role": "Employee",
+    "businessType": "Manufacturing",
+    "businessId": "MA-2818"
   }
 ]
