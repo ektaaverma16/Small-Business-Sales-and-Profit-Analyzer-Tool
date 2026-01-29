@@ -51,7 +51,7 @@
             <span class="title">Users</span>
           </a>
         </li>
-        <li class="owner-only manager-only employee-only">
+        <li class="owner-only manager-only employee-only accountant-only">
           <a href="javascript:void(0)" onclick="showSection('viewSales')">
             <span class="icon"><ion-icon name="eye-outline"></ion-icon></span>
             <span class="title">View Sales</span>
@@ -63,7 +63,7 @@
             <span class="title">Reports</span>
           </a>
         </li>
-        <li class="owner-only">
+        <li class="owner-only manager-only accountant-only">
           <a href="javascript:void(0)" onclick="showSection('inventory')">
             <span class="icon"><ion-icon name="document-text-outline"></ion-icon></ion-icon></span>
             <span class="title">Inventory</span>
@@ -154,9 +154,13 @@
           </div>
         </div>
 
-        <!-------MY PRODUCTION HISTORY -->
         <section class="production-history employee-only">
-          <h3>My Production History</h3>
+          <div class="table-header">
+            <h3>My Production History</h3>
+            <button id="showProductionFormBtn" class="btn btn-primary">
+              ➕ Add New Production
+            </button>
+          </div>
 
           <table id="productionHistoryTable" class="production-table">
             <thead>
@@ -176,10 +180,6 @@
           </table>
 
         </section>
-
-        <button id="showProductionFormBtn" class="btn btn-primary " style="margin-bottom: 15px;">
-          ➕ Add New Production
-        </button>
 
 
         <!-- EDIT PRODUCTION MODAL -->
@@ -214,12 +214,19 @@
             <form id="productionForm">
               <div class="salesInput">
 
+                <label>Category</label>
+                <select id="prodCategory" required>
+                  <option value="">Select Category</option>
+                  <option value="Cakes">🍰 Cakes</option>
+                  <option value="Pastries and Desserts">🧁 Pastries & Desserts</option>
+                  <option value="Breads and Buns">🥐 Breads & Buns</option>
+                  <option value="Savory Veg Items">🥟 Savory Veg Items</option>
+                  <option value="Cookies and Tea Time">🍪 Cookies & Tea Time</option>
+                </select>
+
                 <label>Product</label>
-                <select id="prodProduct" required>
+                <select id="prodProduct" required disabled>
                   <option value="">Select Product</option>
-                  <option value="Bread">Bread</option>
-                  <option value="Cake">Cake</option>
-                  <option value="Bun">Bun</option>
                 </select>
 
                 <label>Quantity Produced</label>
@@ -267,34 +274,49 @@
       </div>
 
 
-     <!-- ================= VIEW SALES ================= -->
-<div id="viewSales" class="page-section owner-only manager-only employee-only">
+      <!-- ================= VIEW SALES ================= -->
+      <div id="viewSales" class="page-section owner-only manager-only employee-only accountant-only">
 
-  <h2>Sales List</h2>
+        <h2>Sales List</h2>
 
-  <table class="sales-table">
-    <thead>
-      <tr>
-        <th>Category</th>
-        <th>Product</th>
-        <th>Qty</th>
-        <th>Unit Price</th>
-        <th>Total</th>
-        <th>Sale Type</th>
-        <th>Payment</th>
-        <th class="empName">Added By</th>
-        <th>Date</th>
-        <th>Action</th>
-      </tr>
-    </thead>
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+              <th>Sale Type</th>
+              <th>Payment</th>
+              <th class="empName">Added By</th>
+              <th>Date</th>
+              <th id="actionHeader">Action</th>
+            </tr>
+          </thead>
 
-    <tbody id="salesTableBody">
-      <!-- Rows injected by JS -->
-    </tbody>
-  </table>
+          <tbody id="salesTableBody">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
 
-  <p id="salesError"></p>
-</div>
+        <div class="filter-container">
+          <div class="filter-group">
+            <label>Filter by Date</label>
+            <input type="date" id="saleFilterDate">
+          </div>
+          <div class="filter-group">
+            <label>Filter by Month</label>
+            <input type="month" id="saleFilterMonth">
+          </div>
+          <div class="filter-actions">
+            <button class="apply-filter-btn" onclick="applySalesFilter()">Apply Filter</button>
+            <button class="reset-filter-btn" onclick="resetSalesFilter()">Reset</button>
+          </div>
+        </div>
+
+        <p id="salesError"></p>
+      </div>
 
 
       <!-- ================= ADD SALES ================= -->
@@ -307,16 +329,18 @@
           <label>Item Type</label>
           <select id="itemType" required>
             <option value="">Select Category</option>
-            <option value="cakes">🍰 Cakes</option>
-            <option value="pastries">🧁 Pastries & Desserts</option>
-            <option value="breads">🥐 Breads & Buns</option>
-            <option value="savory">🥟 Savory Items</option>
-            <option value="cookies">🍪 Cookies</option>
+            <option value="Cakes">🍰 Cakes</option>
+            <option value="Pastries and Desserts">🧁 Pastries & Desserts</option>
+            <option value="Breads and Buns">🥐 Breads & Buns</option>
+            <option value="Savory Veg Items">🥟 Savory Veg Items</option>
+            <option value="Cookies and Tea Time">🍪 Cookies & Tea Time</option>
           </select>
 
           <!-- ITEM NAME -->
           <label>Item Name</label>
-          <input type="text" id="productName" placeholder="Enter product name" required />
+          <select id="productName" required disabled>
+            <option value="">Select Item</option>
+          </select>
 
           <!-- QUANTITY -->
           <label>Quantity</label>
@@ -405,18 +429,23 @@
       </div>
 
       <!-- ================= INVENTORY ================= -->
-      <div id="inventory" class="page-section owner-only manager-only">
-        <h2>Inventory</h2>
+      <div id="inventory" class="page-section owner-only manager-only accountant-only">
+        <div class="table-header">
+          <h2>Inventory</h2>
+          <button class="add-stock-btn" onclick="openAddStock('')">
+            ➕ Add Stock
+          </button>
+        </div>
 
-
-
-        <table class="activity-table">
+        <table class="inventory-table">
           <thead>
             <tr>
+              <th>Type</th>
               <th>Raw Material</th>
               <th>Stock</th>
               <th>Unit</th>
               <th>Min Level</th>
+              <th>Unit Price</th>
               <th>Cost Price</th>
               <th>Status</th>
               <th>Action</th>
@@ -424,12 +453,6 @@
           </thead>
           <tbody id="inventoryTable"></tbody>
         </table>
-
-        <div class="inventory-actions">
-          <button class="add-stock-btn" onclick="openAddStock('')">
-            ➕ Add Stock
-          </button>
-        </div>
 
 
         <!-- EDIT INVENTORY MODAL -->
@@ -483,8 +506,23 @@
           <div class="card">
             <form id="inventoryForm">
               <div class="input-row">
-                <label>Raw Material Name</label>
-                <input type="text" id="invProduct" placeholder="Sugar, Flour, Butter" required />
+                <label>Material Type</label>
+                <select id="invMaterialType" required>
+                  <option value="">Select Category</option>
+                  <option value="🌾 Base Flours & Starches">🌾 Base Flours & Starches</option>
+                  <option value="🍬 Sweeteners">🍬 Sweeteners</option>
+                  <option value="🧈 Fats & Dairy">🧈 Fats & Dairy</option>
+                  <option value="🧪 Leavening & Baking Agents">🧪 Leavening & Baking Agents</option>
+                  <option value="🍫 Flavours & Enhancers">🍫 Flavours & Enhancers</option>
+                  <option value="🌰 Nuts & Dry Fruits">🌰 Nuts & Dry Fruits</option>
+                  <option value="🧂 Savory Basics & Seasoning">🧂 Savory Basics & Seasoning</option>
+                  <option value="🎨 Additives & Decorations">🎨 Additives & Decorations</option>
+                </select>
+
+                <label>Item Name</label>
+                <select id="invProduct" required disabled>
+                  <option value="">Select Item</option>
+                </select>
 
                 <label>Stock Quantity</label>
                 <input type="number" id="invStock" min="0" required />
@@ -494,14 +532,17 @@
                   <option value="kg">kg</option>
                   <option value="grams">grams</option>
                   <option value="litre">litre</option>
-
+                  <option value="pcs">pcs</option>
                 </select>
 
                 <label>Minimum Stock Level</label>
                 <input type="number" id="invMinStock" min="1" required />
 
-                <label>Cost Price (₹)</label>
-                <input type="number" id="invCost" min="0" />
+                <label>Unit Price (₹)</label>
+                <input type="number" id="invUnitPrice" min="0" step="0.01" required />
+
+                <label>Cost Price (Total ₹)</label>
+                <input type="number" id="invCost" readonly />
               </div>
               <div class="btn-row">
                 <button type="submit" class="addUpdate-btn">Add / Update Stock</button>

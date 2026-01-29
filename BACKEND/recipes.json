@@ -1,18 +1,108 @@
 [
   {
-    "product": "Bread",
+    "product": "Plain Sponge Cake",
     "materials": {
-      "Flour": 0.5,
-      "Yeast": 0.05,
-      "Salt": 0.02
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.3,
+      "Butter": 0.2,
+      "Milk": 0.2,
+      "Baking powder": 0.01
     }
   },
   {
-    "product": "Cake",
+    "product": "Chocolate Cake",
     "materials": {
-      "Flour": 0.6,
-      "Sugar": 0.3,
-      "Egg": 2
+      "All-purpose flour (Maida)": 0.45,
+      "White sugar": 0.35,
+      "Butter": 0.2,
+      "Cocoa powder": 0.05,
+      "Milk": 0.2
+    }
+  },
+  {
+    "product": "White Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.6,
+      "Yeast (Instant or Dry)": 0.01,
+      "Salt": 0.01,
+      "Butter": 0.03,
+      "Milk": 0.1
+    }
+  },
+  {
+    "product": "Butter Cookies",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.25,
+      "Butter": 0.3,
+      "Vanilla essence": 0.005
+    }
+  },
+  {
+    "product": "Veg Puff",
+    "materials": {
+      "All-purpose flour (Maida)": 0.3,
+      "Vegetable oil": 0.1,
+      "Salt": 0.005,
+      "Mixed herbs": 0.002
+    }
+  },
+  {
+    "product": "Vanilla Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.3,
+      "Butter": 0.2,
+      "Vanilla essence": 0.01,
+      "Milk": 0.2
+    }
+  },
+  {
+    "product": "Brownie",
+    "materials": {
+      "All-purpose flour (Maida)": 0.2,
+      "Brown sugar": 0.3,
+      "Butter": 0.25,
+      "Cocoa powder": 0.1,
+      "Chocolate chips": 0.15
+    }
+  },
+  {
+    "product": "Pav Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "Yeast (Instant or Dry)": 0.015,
+      "Salt": 0.01,
+      "Vegetable oil": 0.05
+    }
+  },
+  {
+    "product": "Paneer Puff",
+    "materials": {
+      "All-purpose flour (Maida)": 0.3,
+      "Vegetable oil": 0.1,
+      "Salt": 0.005,
+      "Mixed herbs": 0.002
+    }
+  },
+  {
+    "product": "Chocolate Chip Cookies",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.2,
+      "Brown sugar": 0.1,
+      "Butter": 0.3,
+      "Chocolate chips": 0.1
+    }
+  },
+  {
+    "product": "Milk Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "Milk": 0.3,
+      "White sugar": 0.05,
+      "Yeast (Instant or Dry)": 0.015,
+      "Butter": 0.05
     }
   }
 ]

@@ -8,5 +8,27 @@
     "expiry_date": "2026-01-27T00:00:00.000Z",
     "status": "PENDING_APPROVAL",
     "notes": ""
+  },
+  {
+    "batchId": "BATCH-1769708392157",
+    "product": "White Bread",
+    "quantity": 10,
+    "producedBy": "sam12",
+    "production_date": "2026-01-29T00:00:00.000Z",
+    "expiry_date": "2026-02-01T00:00:00.000Z",
+    "status": "PENDING_APPROVAL",
+    "notes": "",
+    "business": "MA-2818"
+  },
+  {
+    "batchId": "BATCH-1769708577005",
+    "product": "Veg Samosa",
+    "quantity": 80,
+    "producedBy": "sam12",
+    "production_date": "2026-01-29T00:00:00.000Z",
+    "expiry_date": "2026-02-01T00:00:00.000Z",
+    "status": "PENDING_APPROVAL",
+    "notes": "",
+    "business": "MA-2818"
   }
 ]

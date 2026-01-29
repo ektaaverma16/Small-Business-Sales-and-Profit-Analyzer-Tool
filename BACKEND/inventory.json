@@ -1,47 +1,84 @@
 [
   {
-    "id": 1768822724858,
-    "product": "Speaker",
-    "stock": 10,
-    "costPrice": 2000,
-    "business": "Retail"
-  },
-  {
-    "id": 1768834167365,
-    "product": "Speaker",
-    "stock": 15,
-    "costPrice": 2000,
-    "business": "Manufacturing"
-  },
-  {
-    "id": 1769347150397,
-    "product": "Bread",
-    "stock": 2,
-    "costPrice": 0
-  },
-  {
-    "id": 1769510621230,
-    "product": "sugar",
-    "stock": 15,
-    "costPrice": 400,
-    "business": "MA-2818",
+    "id": 1769695651199,
+    "product": "white sugar",
+    "stock": 50,
     "unit": "kg",
-    "minStock": 5
-  },
-  {
-    "id": 1769511055034,
-    "product": "butter",
-    "stock": 500,
-    "costPrice": 700,
+    "minStock": 10,
+    "costPrice": 2000,
     "business": "MA-2818"
   },
   {
-    "id": 1769511671232,
-    "product": "flour",
+    "id": 1769696893453,
+    "product": "all-purpose flour (maida)",
     "stock": 18,
-    "costPrice": 450,
-    "business": "MA-2818",
     "unit": "kg",
-    "minStock": 5
+    "minStock": 10,
+    "costPrice": 600,
+    "business": "MA-2818",
+    "materialType": "🌾 Base Flours & Starches",
+    "unitPrice": 30
+  },
+  {
+    "id": 1769707931908,
+    "materialType": "🧪 Leavening & Baking Agents",
+    "product": "Yeast (Instant or Dry)",
+    "stock": 499.9,
+    "unitPrice": 2,
+    "costPrice": 1000,
+    "unit": "grams",
+    "minStock": 100,
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769707995756,
+    "materialType": "🧂 Savory Basics & Seasoning",
+    "product": "Salt",
+    "stock": 19.9,
+    "unitPrice": 30,
+    "costPrice": 600,
+    "unit": "kg",
+    "minStock": 5,
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769708039036,
+    "materialType": "🧈 Fats & Dairy",
+    "product": "Milk",
+    "stock": 19,
+    "unitPrice": 75,
+    "costPrice": 1500,
+    "unit": "litre",
+    "minStock": 10,
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769708146069,
+    "materialType": "🧈 Fats & Dairy",
+    "product": "Butter",
+    "stock": 9.7,
+    "unitPrice": 400,
+    "costPrice": 4000,
+    "unit": "kg",
+    "minStock": 4,
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769708392156,
+    "product": "White Bread",
+    "stock": 10,
+    "unit": "pcs",
+    "minStock": 0,
+    "costPrice": 0,
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769708577004,
+    "product": "Veg Samosa",
+    "stock": 80,
+    "unit": "pcs",
+    "minStock": 0,
+    "costPrice": 0,
+    "business": "MA-2818"
   }
 ]

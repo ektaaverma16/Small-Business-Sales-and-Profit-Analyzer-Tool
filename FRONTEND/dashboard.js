@@ -150,6 +150,7 @@ function loadDashboard() {
       if (user.role === "Owner") document.body.classList.add("role-owner");
       if (user.role === "Manager") document.body.classList.add("role-manager");
       if (user.role === "Employee") document.body.classList.add("role-employee");
+      if (user.role === "Accountant") document.body.classList.add("role-accountant");
 
 
 
@@ -162,7 +163,7 @@ function loadDashboard() {
       if (user.role === "Employee") {
         loadMyProductionHistory();
       }
-      if (currentUserRole !== "Employee") {
+      if (["Owner", "Manager", "Accountant"].includes(user.role)) {
         loadInventory();
       }
 
@@ -206,9 +207,14 @@ function applyRoleVisibility(role) {
       .forEach(el => el.style.display = "block");
   }
 
-  // Owner & Manager → show owner-manager KPI cards
-  document.querySelectorAll(".stat-card.owner-only, .stat-card.manager-only").forEach(card => {
-    card.style.display = (role === "Owner" || role === "Manager") ? "flex" : "none";
+  if (role === "Accountant") {
+    document.querySelectorAll(".navigation .accountant-only")
+      .forEach(el => el.style.display = "block");
+  }
+
+  // Owner, Manager, & Accountant → show privileged KPI cards
+  document.querySelectorAll(".stat-card.owner-only, .stat-card.manager-only, .stat-card.accountant-only").forEach(card => {
+    card.style.display = (role === "Owner" || role === "Manager" || role === "Accountant") ? "flex" : "none";
   });
 
   // Employee → show employee KPI cards
@@ -666,6 +672,117 @@ document.getElementById("productionForm").addEventListener("submit", async (e) =
   }
 });
 
+// ================= MATERIAL ITEM MAPPING =================
+const materialItems = {
+  "🌾 Base Flours & Starches": ["All-purpose flour (Maida)", "Whole wheat flour", "Semolina", "Cornflour", "Bread flour"],
+  "🍬 Sweeteners": ["White sugar", "Brown sugar", "Powdered sugar (Icing sugar)", "Jaggery powder", "Glucose syrup"],
+  "🧈 Fats & Dairy": ["Butter", "Margarine", "Vegetable oil", "Milk", "Fresh cream", "Whipping cream", "Condensed milk", "Cheese"],
+  "🧪 Leavening & Baking Agents": ["Baking powder", "Baking soda", "Yeast (Instant or Dry)", "Cake improver", "Bread improver"],
+  "🍫 Flavours & Enhancers": ["Vanilla essence", "Cocoa powder", "Chocolate chips", "Coffee powder", "Custard powder"],
+  "🌰 Nuts & Dry Fruits": ["Cashews", "Almonds", "Raisins", "Pistachios", "Walnuts"],
+  "🧂 Savory Basics & Seasoning": ["Salt", "Black pepper", "Oregano", "Chili flakes", "Mixed herbs"],
+  "🎨 Additives & Decorations": ["Food color", "Sprinklers", "Veg gelatin", "Baking chocolate", "Compound chocolate"]
+};
+
+// ================= SALES ITEM MAPPING =================
+const salesItems = {
+  "Cakes": [
+    "Plain Sponge Cake", "Chocolate Cake", "Vanilla Cake", "Black Forest Cake",
+    "Pineapple Cake", "Red Velvet Cake", "Fruit Cake", "Coffee Cake",
+    "Marble Cake", "Eggless Cake"
+  ],
+  "Pastries and Desserts": [
+    "Chocolate Pastry", "Vanilla Pastry", "Pineapple Pastry", "Strawberry Pastry",
+    "Cupcake", "Chocolate Cupcake", "Choco Lava Cake", "Brownie",
+    "Swiss Roll", "Chocolate Mousse", "Mango Mousse"
+  ],
+  "Breads and Buns": [
+    "White Bread", "Brown Bread", "Whole Wheat Bread", "Multigrain Bread",
+    "Milk Bread", "Pav Bread", "Sandwich Bread", "Burger Buns",
+    "Hot Dog Buns", "Garlic Bread"
+  ],
+  "Savory Veg Items": [
+    "Veg Puff", "Paneer Puff", "Cheese Puff", "Veg Roll", "Bread Roll",
+    "Veg Patty", "Veg Samosa", "Cheese Croissant", "Veg Calzone", "Stuffed Bun"
+  ],
+  "Cookies and Tea Time": [
+    "Butter Cookies", "Chocolate Chip Cookies", "Oat Cookies", "Jeera Biscuits",
+    "Oatmeal Cookies", "Khari Biscuit", "Rusk Toast", "Coconut Cookies",
+    "Sugar-free Biscuits", "Digestive Biscuits"
+  ]
+};
+
+// ================= DYNAMIC INVENTORY DROPDOWN =================
+document.getElementById("invMaterialType")?.addEventListener("change", function () {
+  const type = this.value;
+  const productSelect = document.getElementById("invProduct");
+  productSelect.innerHTML = '<option value="">Select Item</option>';
+
+  if (type && materialItems[type]) {
+    materialItems[type].forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item;
+      opt.textContent = item;
+      productSelect.appendChild(opt);
+    });
+    productSelect.disabled = false;
+  } else {
+    productSelect.disabled = true;
+  }
+});
+
+// ================= DYNAMIC SALES DROPDOWN =================
+document.getElementById("itemType")?.addEventListener("change", function () {
+  const type = this.value;
+  const productSelect = document.getElementById("productName");
+  productSelect.innerHTML = '<option value="">Select Item</option>';
+
+  if (type && salesItems[type]) {
+    salesItems[type].forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item;
+      opt.textContent = item;
+      productSelect.appendChild(opt);
+    });
+    productSelect.disabled = false;
+  } else {
+    productSelect.disabled = true;
+  }
+});
+
+// ================= DYNAMIC PRODUCTION DROPDOWN =================
+document.getElementById("prodCategory")?.addEventListener("change", function () {
+  const type = this.value;
+  const productSelect = document.getElementById("prodProduct");
+  productSelect.innerHTML = '<option value="">Select Product</option>';
+
+  if (type && salesItems[type]) {
+    salesItems[type].forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item;
+      opt.textContent = item;
+      productSelect.appendChild(opt);
+    });
+    productSelect.disabled = false;
+  } else {
+    productSelect.disabled = true;
+  }
+});
+
+// ================= INVENTORY COST CALCULATION =================
+const invStockInput = document.getElementById("invStock");
+const invUnitPriceInput = document.getElementById("invUnitPrice");
+const invCostInput = document.getElementById("invCost");
+
+function calculateInventoryCost() {
+  const stock = Number(invStockInput.value) || 0;
+  const unitPrice = Number(invUnitPriceInput.value) || 0;
+  invCostInput.value = (stock * unitPrice).toFixed(2);
+}
+
+invStockInput?.addEventListener("input", calculateInventoryCost);
+invUnitPriceInput?.addEventListener("input", calculateInventoryCost);
+
 //***************LOAD SALES*************/
 function formatDate(dateValue) {
   if (!dateValue) return "—";
@@ -680,11 +797,11 @@ function formatDate(dateValue) {
   });
 }
 
-function loadSalesTable() {
+function loadSalesTable(queryParams = "") {
   const section = document.getElementById("viewSales");
   if (!section.classList.contains("active")) return;
 
-  fetch("http://localhost:3000/sales", {
+  fetch(`http://localhost:3000/sales${queryParams}`, {
     headers: { Authorization: `Bearer ${token}` }
   })
     .then(res => res.json())
@@ -694,37 +811,67 @@ function loadSalesTable() {
 
       tbody.innerHTML = "";
 
+      const isPrivileged = (currentUserRole === "Owner" || currentUserRole === "Accountant");
+
+      // Handle Action Header Visibility
+      const actionHeader = document.getElementById("actionHeader");
+      if (actionHeader) {
+        actionHeader.style.display = isPrivileged ? "table-cell" : "none";
+      }
+
       if (sales.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8">No sales found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isPrivileged ? 10 : 9}">No sales found</td></tr>`;
         return;
       }
 
       sales.forEach(sale => {
+        let actionCell = "";
+        if (isPrivileged) {
+          actionCell = `
+            <td>
+              <button onclick="downloadInvoice(${sale.id})">Invoice</button>
+              <span class="delete-btn" data-id="${sale.id}">🗑 Delete</span>
+            </td>`;
+        }
+
         tbody.innerHTML += `
           <tr>
-          <td>${sale.itemType}</td>
-<td>${sale.product}</td>
-<td>${sale.quantity}</td>
-<td>₹${sale.unitPrice}</td>
-<td>₹${sale.total}</td>
-<td>${sale.saleType}</td>
-<td>${sale.paymentMode}</td>
-<td>${sale.addedBy}</td>
-<td data-label="Date">${formatDate(sale.date)}</td>
-
-
-
-            <td>
-              ${(currentUserRole === "Owner" || currentUserRole === "Accountant")
-            ? `<button onclick="downloadInvoice(${sale.id})">Invoice</button>`
-            : ""
-          }
-              <span class="delete-btn" data-id="${sale.id}">🗑 Delete</span>
-            </td>
+            <td>${sale.itemType}</td>
+            <td>${sale.product}</td>
+            <td>${sale.quantity}</td>
+            <td>₹${sale.unitPrice}</td>
+            <td>₹${sale.total}</td>
+            <td>${sale.saleType}</td>
+            <td>${sale.paymentMode}</td>
+            <td>${sale.addedBy}</td>
+            <td data-label="Date">${formatDate(sale.date)}</td>
+            ${actionCell}
           </tr>
         `;
       });
     });
+}
+
+function applySalesFilter() {
+  const date = document.getElementById("saleFilterDate").value;
+  const month = document.getElementById("saleFilterMonth").value;
+
+  let query = "";
+  if (date) {
+    query = `?date=${date}`;
+  } else if (month) {
+    query = `?month=${month}`;
+  }
+
+  loadSalesTable(query);
+}
+
+function resetSalesFilter() {
+  const dateInput = document.getElementById("saleFilterDate");
+  const monthInput = document.getElementById("saleFilterMonth");
+  if (dateInput) dateInput.value = "";
+  if (monthInput) monthInput.value = "";
+  loadSalesTable();
 }
 
 
@@ -818,7 +965,6 @@ function loadInventory() {
       items.forEach(i => {
         let statusText = "In Stock";
         let statusClass = "status-ok";
-        let actionBtn = "-";
 
         if (i.stock === 0) {
           statusText = "Out of Stock";
@@ -830,39 +976,37 @@ function loadInventory() {
           statusClass = "status-low";
           lowStockItems.push(i);
         }
-        //  Show Add Stock button only to allowed roles
-        if (
-          ["Owner", "Manager", "Accountant"].includes(currentUserRole)
-          && i.stock <= i.minStock
-        ) {
-          actionBtn = `
-      <button class="add-stock-btn"
-        onclick="openAddStock('${i.product}')">
-        + Add Stock
-      </button>
-    `;
+
+        // Try to guess type if missing
+        let displayType = i.materialType;
+        if (!displayType || displayType === "-") {
+          const lowerProd = i.product.toLowerCase();
+          for (const [type, products] of Object.entries(materialItems)) {
+            if (products.some(p => p.toLowerCase() === lowerProd)) {
+              displayType = type;
+              break;
+            }
+          }
         }
+
+        // Fix unitPrice display if missing
+        const unitPriceNum = i.unitPrice || (i.stock > 0 ? (i.costPrice / i.stock) : 0);
 
         tbody.innerHTML += `
           <tr>
-            <td>${i.product}</td>
-    <td>${i.stock}</td>
-    <td>${i.unit || "-"}</td>
-    <td>${i.minStock ?? "-"}</td>
-    <td>₹${i.costPrice ?? "-"}</td>
-    <td class="${statusClass}">${statusText}</td>
-    <td>
-  <button class="edit-btn"
-    onclick='openEditInventory(${JSON.stringify(i)})'>
-    Edit
-  </button>
-
-  <button class="delete-btn"
-    onclick="openDeleteInventory(${i.id})">
-    Delete
-  </button>
-</td>
-
+            <td>${displayType || "-"}</td>
+            <td style="text-transform: capitalize;">${i.product}</td>
+            <td>${i.stock}</td>
+            <td>${i.unit || "-"}</td>
+            <td>${i.minStock ?? "-"}</td>
+            <td>₹${Number(unitPriceNum).toFixed(2)}</td>
+            <td>₹${Number(i.costPrice || 0).toFixed(2)}</td>
+            <td><span class="${statusClass}">${statusText}</span></td>
+            <td>
+              <button class="edit-btn" onclick='openEditInventory(${JSON.stringify(i)})'>Edit</button>
+              <button class="delete-btn" onclick="openDeleteInventory(${i.id})">Delete</button>
+            </td>
+          </tr>
         `;
       });
 
@@ -882,19 +1026,22 @@ function loadInventory() {
 // INVENTORY FORM
 document.getElementById("inventoryForm")?.addEventListener("submit", e => {
   e.preventDefault();
+  const invMaterialType = document.getElementById("invMaterialType");
   const invProduct = document.getElementById("invProduct");
   const invStock = document.getElementById("invStock");
   const invUnit = document.getElementById("invUnit");
-  const invMinStock = document.getElementById("invMinStock");
+  const invUnitPrice = document.getElementById("invUnitPrice");
   const invCost = document.getElementById("invCost");
 
   const invMsg = document.getElementById("invMsg");
 
-  const product = invProduct.value.trim().toLowerCase();
+  const materialType = invMaterialType.value;
+  const product = invProduct.value;
   const stock = Number(invStock.value);
+  const unitPrice = Number(invUnitPrice.value);
+  const costPrice = Number(invCost.value);
   const unit = invUnit.value;
   const minStock = Number(invMinStock.value);
-  const costPrice = Number(invCost.value);
 
   fetch("http://localhost:3000/inventory/add", {
     method: "POST",
@@ -903,11 +1050,13 @@ document.getElementById("inventoryForm")?.addEventListener("submit", e => {
       Authorization: `Bearer ${token}`
     },
     body: JSON.stringify({
+      materialType,
       product,
       stock,
+      unitPrice,
+      costPrice,
       unit,
-      minStock,
-      costPrice
+      minStock
     })
   })
     .then(res => {
@@ -964,13 +1113,11 @@ async function loadMyProductionHistory() {
         <td>${batch.batchId}</td>
         <td>${batch.product}</td>
         <td>${batch.quantity}</td>
-        <td>${new Date(batch.production_date).toLocaleDateString()}</td>
-        <td>${batch.status}</td>
-        <td>${new Date(batch.expiry_date).toLocaleDateString()}</td>
+        <td>${formatDate(batch.production_date)}</td>
+        <td><span class="status-badge ${batch.status.toLowerCase()}">${batch.status}</span></td>
+        <td>${formatDate(batch.expiry_date)}</td>
         <td>
           ${canEdit
-        // batch.status === "PENDING_APPROVAL"
-
         ? `<button onclick="openEditModal('${batch.batchId}', ${batch.quantity}, '${batch.notes || ""}')">Edit</button>`
         : "-"}
         </td>
@@ -1002,7 +1149,10 @@ function showLowStockAlert(items) {
     alertBox = document.createElement("div");
     alertBox.id = "lowStockAlert";
     alertBox.className = "low-stock-alert";
-    document.querySelector(".dashboard").prepend(alertBox);
+    const dashboardSection = document.getElementById("dashboard");
+    if (dashboardSection) {
+      dashboardSection.prepend(alertBox);
+    }
   }
 
   alertBox.innerHTML = `
@@ -1126,7 +1276,7 @@ if (token) {
 function downloadInvoice(saleId) {
   const token = localStorage.getItem("jwtToken");
 
- 
+
   const url = `http://localhost:3000/invoice/${saleId}?token=${token}`;
   window.open(url, "_blank");
 }

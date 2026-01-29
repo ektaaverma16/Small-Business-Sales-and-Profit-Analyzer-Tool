@@ -21,9 +21,17 @@ const USERS_FILE = "users.json";
 
 // ================= EXPIRY RULES =================
 const PRODUCT_EXPIRY_DAYS = {
-  Bread: 2,
-  Bun: 2,
-  Cake: 5
+  "Plain Sponge Cake": 5,
+  "Chocolate Cake": 5,
+  "Vanilla Cake": 5,
+  "Black Forest Cake": 3,
+  "White Bread": 3,
+  "Milk Bread": 3,
+  "Brown Bread": 3,
+  "Pav Bread": 2,
+  "Veg Puff": 1,
+  "Paneer Puff": 1,
+  "Butter Cookies": 30
 };
 
 
@@ -267,7 +275,7 @@ app.post("/sales/add", verifyToken, (req, res) => {
   }
 
   const sales = loadSales();
- 
+
 
   const newSale = {
     id: Date.now(),
@@ -296,6 +304,7 @@ app.post("/sales/add", verifyToken, (req, res) => {
 
 /* ---------------- VIEW SALES ---------------- */
 app.get("/sales", verifyToken, (req, res) => {
+  const { date, month } = req.query;
   const sales = loadSales();
 
   // Role-based filtering
@@ -305,6 +314,19 @@ app.get("/sales", verifyToken, (req, res) => {
     filteredSales = sales.filter(
       sale => sale.addedBy === req.user.username
     );
+  }
+
+  // Date/Month filtering
+  if (date) {
+    filteredSales = filteredSales.filter(sale => {
+      // sale.date is stored as ISO string
+      return new Date(sale.date).toISOString().split('T')[0] === date;
+    });
+  } else if (month) {
+    // month format YYYY-MM
+    filteredSales = filteredSales.filter(sale => {
+      return new Date(sale.date).toISOString().slice(0, 7) === month;
+    });
   }
 
   res.json(filteredSales);
@@ -365,53 +387,46 @@ function saveInventory(data) {
 
 // ================= ADD / UPDATE INVENTORY =================
 app.post("/inventory/add", verifyToken, (req, res) => {
-  const { product, stock, unit, minStock, costPrice } = req.body;
-  const allowedUnits = ["kg", "grams", "litre"];
+  const { materialType, product, stock, unitPrice, costPrice, unit, minStock } = req.body;
+  const allowedUnits = ["kg", "grams", "litre", "pcs"];
 
   if (unit && !allowedUnits.includes(unit)) {
     return res.status(400).json({
-      message: "Invalid unit. Allowed units: kg, grams, litre"
+      message: "Invalid unit. Allowed units: kg, grams, litre, pcs"
     });
   }
 
-
-  console.log("BODY:", req.body);
-
   let inventory = loadInventory();
-
-  const normalizedProduct = product.trim().toLowerCase();
-
+  const normalizedProduct = product.trim();
 
   const existing = inventory.find(
     i =>
-      i.product.toLowerCase() === normalizedProduct &&
+      i.product.toLowerCase() === normalizedProduct.toLowerCase() &&
       i.business === req.user.businessId
   );
 
-
   if (existing) {
     existing.stock += Number(stock);
-
+    if (materialType) existing.materialType = materialType;
+    if (unitPrice !== undefined) existing.unitPrice = Number(unitPrice);
+    if (costPrice !== undefined) existing.costPrice = Number(costPrice);
     if (unit) existing.unit = unit;
     if (minStock !== undefined) existing.minStock = Number(minStock);
-    if (costPrice !== undefined) existing.costPrice = Number(costPrice);
-
   } else {
     inventory.push({
       id: Date.now(),
+      materialType,
       product: normalizedProduct,
       stock: Number(stock),
+      unitPrice: Number(unitPrice),
+      costPrice: Number(costPrice),
       unit,
       minStock: Number(minStock),
-      costPrice: Number(costPrice),
       business: req.user.businessId
     });
   }
 
   saveInventory(inventory);
-
-  console.log("UPDATED INVENTORY:", inventory);
-
   res.json({ message: "Inventory updated successfully" });
 });
 
@@ -467,53 +482,51 @@ app.post("/production/add", verifyToken, (req, res) => {
   // ================= EXPIRY DATE CALCULATION =================
   const prodDate = production_date ? new Date(production_date) : new Date();
 
-  const shelfLifeDays = PRODUCT_EXPIRY_DAYS[product];
-  if (!shelfLifeDays) {
-    return res.status(400).json({ message: "Expiry rule not defined for product" });
-  }
+  // Get expiry days or use a sensible default (3 days)
+  const shelfLifeDays = PRODUCT_EXPIRY_DAYS[product] || 3;
 
   const expiryDate = new Date(prodDate);
   expiryDate.setDate(expiryDate.getDate() + shelfLifeDays);
 
-  // ================= LOAD RECIPE =================
+  // ================= LOAD INVENTORY & RECIPES =================
+  const inventory = loadInventory();
   const recipes = loadRecipes();
   const recipe = recipes.find(r => r.product === product);
 
   if (!recipe) {
-    return res.status(400).json({ message: "Recipe not found" });
-  }
+    // If no recipe, we create a temporary batch but skip deduction
+    // This prevents the "Recipe not found" error from blocking production
+    console.warn(`No recipe found for ${product}. Skipping ingredient deduction.`);
+  } else {
+    // ================= CHECK RAW MATERIAL AVAILABILITY =================
+    for (let mat in recipe.materials) {
+      const requiredQty = recipe.materials[mat] * quantity;
 
-  // ================= LOAD INVENTORY (SINGLE SOURCE) =================
-  const inventory = loadInventory();
+      const invItem = inventory.find(
+        i =>
+          i.product.toLowerCase() === mat.toLowerCase() &&
+          i.business === req.user.businessId
+      );
 
-  // ================= CHECK RAW MATERIAL AVAILABILITY =================
-  for (let mat in recipe.materials) {
-    const requiredQty = recipe.materials[mat] * quantity;
-
-    const invItem = inventory.find(
-      i =>
-        i.product.toLowerCase() === mat.toLowerCase() &&
-        i.business === req.user.businessId
-    );
-
-    if (!invItem || invItem.stock < requiredQty) {
-      return res.status(400).json({
-        message: `Insufficient ${mat} stock`
-      });
+      if (!invItem || invItem.stock < requiredQty) {
+        return res.status(400).json({
+          message: `Insufficient ${mat} stock`
+        });
+      }
     }
-  }
 
-  // ================= DEDUCT RAW MATERIALS =================
-  for (let mat in recipe.materials) {
-    const requiredQty = recipe.materials[mat] * quantity;
+    // ================= DEDUCT RAW MATERIALS =================
+    for (let mat in recipe.materials) {
+      const requiredQty = recipe.materials[mat] * quantity;
 
-    const invItem = inventory.find(
-      i =>
-        i.product.toLowerCase() === mat.toLowerCase() &&
-        i.business === req.user.businessId
-    );
+      const invItem = inventory.find(
+        i =>
+          i.product.toLowerCase() === mat.toLowerCase() &&
+          i.business === req.user.businessId
+      );
 
-    invItem.stock -= requiredQty;
+      if (invItem) invItem.stock -= requiredQty;
+    }
   }
 
   // ================= ADD FINISHED GOODS =================
