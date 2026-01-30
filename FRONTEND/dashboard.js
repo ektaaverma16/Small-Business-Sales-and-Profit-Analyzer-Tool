@@ -77,7 +77,7 @@ async function submitEdit() {
   const token = localStorage.getItem("jwtToken");
 
   const res = await fetch(
-    `http://localhost:3000/production/update/${editingBatchId}`,
+    `http://127.0.0.1:3000/production/update/${editingBatchId}`,
     {
       method: "PUT",
       headers: {
@@ -130,7 +130,7 @@ list.forEach(item => {
 // LOAD DASHBOARD
 // =============================
 function loadDashboard() {
-  fetch("http://localhost:3000/dashboard", {
+  fetch("http://127.0.0.1:3000/dashboard", {
     method: "GET",
     headers: {
       "Authorization": "Bearer " + token,
@@ -145,7 +145,7 @@ function loadDashboard() {
       const user = data.user;
       currentUserRole = user.role;
 
-      document.body.classList.remove("role-owner", "role-manager", "role-employee");
+      document.body.classList.remove("role-owner", "role-manager", "role-employee", "role-accountant");
 
       if (user.role === "Owner") document.body.classList.add("role-owner");
       if (user.role === "Manager") document.body.classList.add("role-manager");
@@ -189,7 +189,7 @@ function applyRoleVisibility(role) {
 
   //  Hide ONLY navigation items
   document
-    .querySelectorAll(".navigation .owner-only, .navigation .manager-only, .navigation .employee-only")
+    .querySelectorAll(".navigation .owner-only, .navigation .manager-only, .navigation .employee-only, .navigation .accountant-only")
     .forEach(el => el.style.display = "none");
 
   if (role === "Owner") {
@@ -212,6 +212,16 @@ function applyRoleVisibility(role) {
       .forEach(el => el.style.display = "block");
   }
 
+  // ===== EMPLOYEE BACKGROUND =====
+  const mainContent = document.querySelector(".main");
+  if (mainContent) {
+    if (role === "Employee") {
+      mainContent.classList.add("employee-mode");
+    } else {
+      mainContent.classList.remove("employee-mode");
+    }
+  }
+
   // Owner, Manager, & Accountant → show privileged KPI cards
   document.querySelectorAll(".stat-card.owner-only, .stat-card.manager-only, .stat-card.accountant-only").forEach(card => {
     card.style.display = (role === "Owner" || role === "Manager" || role === "Accountant") ? "flex" : "none";
@@ -228,10 +238,25 @@ function applyRoleVisibility(role) {
       .querySelectorAll(".dashboard-card.owner-only, .dashboard-card.manager-only")
       .forEach(el => el.style.display = "none");
   }
+
+  // ===== PRODUCTION SECTIONS - EMPLOYEE ONLY =====
+  // Hide "My Production History" section from Owner, Manager, and Accountant
+  const productionHistorySection = document.querySelector(".production-history.employee-only");
+  if (productionHistorySection) {
+    productionHistorySection.style.display = (role === "Employee") ? "block" : "none";
+  }
+
+  // Hide "Daily Production Entry" section from Owner, Manager, and Accountant
+  const productionEntrySection = document.querySelector(".production-entry-section.employee-only");
+  if (productionEntrySection) {
+    productionEntrySection.style.display = (role === "Employee") ? "block" : "none";
+  }
+
+  // Hide the production form itself (legacy code - keeping for compatibility)
   const productionSection = document.getElementById("production");
   if (productionSection) {
     productionSection.style.display =
-      role.toLowerCase() === "employee" ? "block" : "none";
+      role.toLowerCase() === "employee" ? "none" : "none"; // Always hidden initially (toggle button controls it)
   }
 
   // Section visibility controlled ONLY by active class
@@ -251,7 +276,7 @@ function loadUsersTable() {
   tbody.innerHTML = "";
   errorEl.innerText = "";
 
-  fetch("http://localhost:3000/users", {
+  fetch("http://127.0.0.1:3000/users", {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`
@@ -285,7 +310,7 @@ function loadUsersTable() {
 // LOAD SALES → KPIs + CHARTS
 // =============================
 function loadSalesForDashboard() {
-  fetch("http://localhost:3000/sales", {
+  fetch("http://127.0.0.1:3000/sales", {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -348,6 +373,9 @@ function showSection(sectionId) {
   if (sectionId === "inventory") {
     loadInventory();
   }
+  if (sectionId === "expenses") {
+    loadExpensesTable();
+  }
 
 }
 
@@ -363,7 +391,6 @@ function updateEmployeeKPIs(sales) {
   let itemsSoldToday = 0;
 
   sales.forEach(sale => {
-    // employee sees ONLY their own sales
     if (sale.addedBy !== loggedInEmployee) return;
     const saleDate = new Date(sale.date).toLocaleDateString();
 
@@ -376,31 +403,41 @@ function updateEmployeeKPIs(sales) {
   document.getElementById("empSalesToday").innerText = `₹${salesToday}`;
   document.getElementById("empItemsSoldToday").innerText = itemsSoldToday;
 
-  fetch("http://localhost:3000/production/my-history", {
+  // Refresh production stats
+  fetch("http://127.0.0.1:3000/production/my-history", {
     headers: { Authorization: `Bearer ${token}` }
   })
     .then(res => res.json())
     .then(batches => {
       const today = new Date().toLocaleDateString();
-
       let todayProduction = 0;
+      let pendingApprovals = 0;
 
       batches.forEach(b => {
         const prodDate = new Date(b.production_date).toLocaleDateString();
         if (prodDate === today) {
           todayProduction += Number(b.quantity);
         }
+        if (b.status === "Pending") {
+          pendingApprovals++;
+        }
       });
 
       document.getElementById("empTodayProduction").innerText = todayProduction;
-    });
+      document.getElementById("empPendingApprovals").innerText = pendingApprovals;
 
+      // Update Trends
+      setTrend("empSalesTodayTrend", salesToday > 0);
+      setTrend("empItemsSoldTrend", itemsSoldToday > 0);
+      setTrend("empTodayProductionTrend", todayProduction > 0);
+      setTrend("empPendingApprovalsTrend", pendingApprovals <= 0, true); // Red down if pending exists
+    });
 }
 
 
 
 //***************OWNER+ MANAGER ONLY************//
-function updateKPIs(sales) {
+function updateKPIs(sales, expenses = []) {
   const today = new Date().toLocaleDateString();
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -412,36 +449,68 @@ function updateKPIs(sales) {
   let completedOrders = 0;
 
   sales.forEach(sale => {
-    const saleDateObj = new Date(sale.saleDate);
+    const saleDateObj = new Date(sale.date);
     const saleDate = saleDateObj.toLocaleDateString();
 
     if (sale.status === "Completed") {
-
-      totalRevenue += sale.total;
+      totalRevenue += Number(sale.total);
       completedOrders++;
 
       if (saleDate === today) {
-        salesToday += sale.total;
+        salesToday += Number(sale.total);
       }
 
       if (
         saleDateObj.getMonth() === currentMonth &&
         saleDateObj.getFullYear() === currentYear
       ) {
-        monthlySales += sale.total;
+        monthlySales += Number(sale.total);
       }
     }
   });
 
-  const avgOrderValue =
-    completedOrders > 0
-      ? Math.round(totalRevenue / completedOrders)
-      : 0;
+  // Calculate Expenses
+  let totalExpenses = 0;
+  expenses.forEach(exp => {
+    totalExpenses += Number(exp.amount);
+  });
 
+  const avgOrderValue = completedOrders > 0 ? Math.round(totalRevenue / completedOrders) : 0;
+  const netProfit = totalRevenue - totalExpenses;
+
+  // Update values
   document.getElementById("salesToday").innerText = `₹${salesToday}`;
   document.getElementById("monthlySales").innerText = `₹${monthlySales}`;
+  document.getElementById("totalExpenses").innerText = `₹${totalExpenses}`;
+  document.getElementById("netProfit").innerText = `₹${netProfit}`;
   document.getElementById("avgOrderValue").innerText = `₹${avgOrderValue}`;
   document.getElementById("totalRevenue").innerText = `₹${totalRevenue}`;
+
+  // Update Trends (Arrows)
+  setTrend("salesTodayTrend", salesToday > 0);
+  setTrend("monthlySalesTrend", monthlySales > 0);
+  setTrend("totalExpensesTrend", totalExpenses <= 0, true); // Red down if > 0
+  setTrend("netProfitTrend", netProfit > 0);
+  setTrend("avgOrderTrend", avgOrderValue > 0);
+  setTrend("totalRevenueTrend", totalRevenue > 0);
+}
+
+/**
+ * Update trend arrow and color
+ * @param {string} elementId 
+ * @param {boolean} isPositive 
+ * @param {boolean} isExpense 
+ */
+function setTrend(elementId, isPositive, isExpense = false) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  if (isExpense) {
+    // For expenses: positive (0) is good, >0 is cost (red down)
+    el.className = isPositive ? "trend-indicator trend-up" : "trend-indicator trend-down";
+  } else {
+    el.className = isPositive ? "trend-indicator trend-up" : "trend-indicator trend-down";
+  }
 }
 
 
@@ -510,7 +579,7 @@ function buildMonthlyProfitChart(sales) {
   sales.forEach(sale => {
     if (sale.status !== "Completed") return;
 
-    const date = new Date(sale.saleDate);
+    const date = new Date(sale.date);
     const month = date.toLocaleString("default", { month: "short", year: "numeric" });
 
     monthlyProfit[month] = (monthlyProfit[month] || 0) + sale.total;
@@ -580,7 +649,7 @@ document.getElementById("addSalesForm")?.addEventListener("submit", e => {
     return;
   }
 
-  fetch("http://localhost:3000/sales/add", {
+  fetch("http://127.0.0.1:3000/sales/add", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -637,7 +706,7 @@ document.getElementById("productionForm").addEventListener("submit", async (e) =
   const notes = document.getElementById("prodNotes").value;
 
   try {
-    const res = await fetch("http://localhost:3000/production/add", {
+    const res = await fetch("http://127.0.0.1:3000/production/add", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -777,7 +846,17 @@ const invCostInput = document.getElementById("invCost");
 function calculateInventoryCost() {
   const stock = Number(invStockInput.value) || 0;
   const unitPrice = Number(invUnitPriceInput.value) || 0;
-  invCostInput.value = (stock * unitPrice).toFixed(2);
+  const cost = (stock * unitPrice).toFixed(2);
+  invCostInput.value = cost;
+
+  // Auto-sync with Expense Amount if in Raw Materials category
+  const expenseCategory = document.getElementById("expenseCategory")?.value;
+  if (expenseCategory === "🌾 Raw Materials") {
+    const expenseAmountInput = document.getElementById("expenseAmount");
+    if (expenseAmountInput) {
+      expenseAmountInput.value = cost;
+    }
+  }
 }
 
 invStockInput?.addEventListener("input", calculateInventoryCost);
@@ -801,7 +880,7 @@ function loadSalesTable(queryParams = "") {
   const section = document.getElementById("viewSales");
   if (!section.classList.contains("active")) return;
 
-  fetch(`http://localhost:3000/sales${queryParams}`, {
+  fetch(`http://127.0.0.1:3000/sales${queryParams}`, {
     headers: { Authorization: `Bearer ${token}` }
   })
     .then(res => res.json())
@@ -875,29 +954,31 @@ function resetSalesFilter() {
 }
 
 
-/// REFRESH KPI's///
-function refreshKPIsOnly() {
-  fetch("http://localhost:3000/sales", {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  })
-    .then(res => res.json())
-    .then(sales => {
-
-      // KPIs
-      if (currentUserRole === "Employee") {
-        updateEmployeeKPIs(sales);
-      } else {
-        updateKPIs(sales);
-      }
-
-      // Charts only for Owner / Manager
-      if (currentUserRole !== "Employee") {
-        buildProfitLossBarChart(sales);
-        buildMonthlyProfitChart(sales);
-      }
+/// REFRESH ALL DASHBOARD DATA ///
+async function refreshKPIsOnly() {
+  try {
+    const salesRes = await fetch("http://127.0.0.1:3000/sales", {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    const sales = await salesRes.json();
+
+    if (currentUserRole === "Employee") {
+      updateEmployeeKPIs(sales);
+    } else {
+      // For Owner/Manager/Accountant, fetch expenses too
+      const expRes = await fetch("http://127.0.0.1:3000/expenses", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const expenses = await expRes.json();
+      updateKPIs(sales, expenses);
+
+      // Refresh Charts
+      buildProfitLossBarChart(sales);
+      buildMonthlyProfitChart(sales);
+    }
+  } catch (err) {
+    console.error("Dashboard refresh failed:", err);
+  }
 }
 
 // event handler//
@@ -912,7 +993,7 @@ document.addEventListener("click", function (e) {
 
     if (!confirm("Delete this sale?")) return;
 
-    fetch(`http://localhost:3000/sales/${saleId}`, {
+    fetch(`http://127.0.0.1:3000/sales/${saleId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`
@@ -943,140 +1024,186 @@ function logout() {
 
 
 // ================= INVENTORY =================
+// ================= INVENTORY (PRODUCTION APPROVALS & HISTORY) =================
+let currentInventoryView = 'approvals'; // 'approvals' or 'history'
+
+function switchInventoryView(view) {
+  currentInventoryView = view;
+
+  // Update Buttons
+  document.getElementById("btnShowApprovals")?.classList.toggle("active", view === 'approvals');
+  document.getElementById("btnShowHistory")?.classList.toggle("active", view === 'history');
+
+  // Show/Hide Date Filter
+  const filter = document.getElementById("productionHistoryFilter");
+  if (filter) filter.style.display = (view === 'history') ? "flex" : "none";
+
+  // Load Content
+  if (view === 'approvals') {
+    loadInventoryApprovals();
+  } else {
+    loadInventoryHistory();
+  }
+}
+
 function loadInventory() {
   if (!currentUserRole) {
     const payload = JSON.parse(atob(token.split(".")[1]));
     currentUserRole = payload.role;
   }
 
-  fetch("http://localhost:3000/inventory", {
+  if (!["Owner", "Manager", "Accountant"].includes(currentUserRole)) return;
+  loadExpensesTable();
+
+  switchInventoryView(currentInventoryView);
+}
+
+function loadInventoryApprovals() {
+  const tbody = document.getElementById("productionApprovalTable");
+  const thead = tbody?.parentElement.querySelector("thead");
+  if (!tbody || !thead) return;
+
+  // Set Headers for Approvals
+  thead.innerHTML = `
+    <tr>
+      <th>Batch ID</th>
+      <th>Product</th>
+      <th>Quantity</th>
+      <th>Produced By</th>
+      <th>Date</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  `;
+
+  tbody.innerHTML = "<tr><td colspan='7' style='text-align:center'>Loading approvals...</td></tr>";
+
+  fetch("http://127.0.0.1:3000/production/history", {
     headers: { Authorization: `Bearer ${token}` }
   })
     .then(res => res.json())
-    .then(items => {
-      const tbody = document.getElementById("inventoryTable");
-      if (!tbody) return;
+    .then(batches => {
+      const pendingBatches = batches.filter(b =>
+        b.status === "Pending" || b.status === "PENDING_APPROVAL"
+      );
+
+      if (pendingBatches.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center'>No pending approvals.</td></tr>";
+        return;
+      }
 
       tbody.innerHTML = "";
-
-      // LOW STOCK COLLECTION
-      const lowStockItems = [];
-
-      items.forEach(i => {
-        let statusText = "In Stock";
-        let statusClass = "status-ok";
-
-        if (i.stock === 0) {
-          statusText = "Out of Stock";
-          statusClass = "status-out";
-          lowStockItems.push(i);
-        }
-        else if (i.stock <= i.minStock) {
-          statusText = "Low Stock";
-          statusClass = "status-low";
-          lowStockItems.push(i);
-        }
-
-        // Try to guess type if missing
-        let displayType = i.materialType;
-        if (!displayType || displayType === "-") {
-          const lowerProd = i.product.toLowerCase();
-          for (const [type, products] of Object.entries(materialItems)) {
-            if (products.some(p => p.toLowerCase() === lowerProd)) {
-              displayType = type;
-              break;
-            }
-          }
-        }
-
-        // Fix unitPrice display if missing
-        const unitPriceNum = i.unitPrice || (i.stock > 0 ? (i.costPrice / i.stock) : 0);
-
-        tbody.innerHTML += `
-          <tr>
-            <td>${displayType || "-"}</td>
-            <td style="text-transform: capitalize;">${i.product}</td>
-            <td>${i.stock}</td>
-            <td>${i.unit || "-"}</td>
-            <td>${i.minStock ?? "-"}</td>
-            <td>₹${Number(unitPriceNum).toFixed(2)}</td>
-            <td>₹${Number(i.costPrice || 0).toFixed(2)}</td>
-            <td><span class="${statusClass}">${statusText}</span></td>
-            <td>
-              <button class="edit-btn" onclick='openEditInventory(${JSON.stringify(i)})'>Edit</button>
-              <button class="delete-btn" onclick="openDeleteInventory(${i.id})">Delete</button>
-            </td>
-          </tr>
+      pendingBatches.forEach(b => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${b.batchId}</td>
+          <td>${b.product}</td>
+          <td>${b.quantity}</td>
+          <td>${b.producedBy}</td>
+          <td>${new Date(b.production_date).toLocaleDateString()}</td>
+          <td><span class="pending">Pending Approval</span></td>
+          <td>
+            <button class="btn-xs success" onclick="updateProductionStatus('${b.batchId}', 'Approved')">Approve</button>
+            <button class="btn-xs delete" onclick="updateProductionStatus('${b.batchId}', 'Rejected')">Reject</button>
+          </td>
         `;
+        tbody.appendChild(row);
       });
-
-      //SHOW ALERT ONLY TO PRIVILEGED ROLES
-      if (
-        lowStockItems.length > 0 &&
-        ["Owner", "Manager", "Accountant"].includes(currentUserRole)
-      ) {
-        showLowStockAlert(lowStockItems);
-      }
     })
     .catch(err => {
-      console.error("Failed to load inventory", err);
+      console.error("Failed to load approvals", err);
+      tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; color:red;'>Error loading data</td></tr>";
     });
 }
 
-// INVENTORY FORM
-document.getElementById("inventoryForm")?.addEventListener("submit", e => {
-  e.preventDefault();
-  const invMaterialType = document.getElementById("invMaterialType");
-  const invProduct = document.getElementById("invProduct");
-  const invStock = document.getElementById("invStock");
-  const invUnit = document.getElementById("invUnit");
-  const invUnitPrice = document.getElementById("invUnitPrice");
-  const invCost = document.getElementById("invCost");
+function loadInventoryHistory() {
+  const tbody = document.getElementById("productionApprovalTable");
+  const thead = tbody?.parentElement.querySelector("thead"); // Reuse same table
+  if (!tbody || !thead) return;
 
-  const invMsg = document.getElementById("invMsg");
+  // Set Headers for History
+  thead.innerHTML = `
+    <tr>
+      <th>Product</th>
+      <th>Qty</th>
+      <th>Produced By</th>
+      <th>Date</th>
+      <th>Status</th>
+      <th>Expiry</th>
+    </tr>
+  `;
 
-  const materialType = invMaterialType.value;
-  const product = invProduct.value;
-  const stock = Number(invStock.value);
-  const unitPrice = Number(invUnitPrice.value);
-  const costPrice = Number(invCost.value);
-  const unit = invUnit.value;
-  const minStock = Number(invMinStock.value);
+  tbody.innerHTML = "<tr><td colspan='6' style='text-align:center'>Loading history...</td></tr>";
 
-  fetch("http://localhost:3000/inventory/add", {
-    method: "POST",
+  const dateFilter = document.getElementById("historyDateFilter")?.value;
+
+  fetch("http://127.0.0.1:3000/production/history", {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+    .then(res => res.json())
+    .then(batches => {
+      // Filter by Date if set
+      let filtered = batches;
+      if (dateFilter) {
+        filtered = batches.filter(b => b.production_date.startsWith(dateFilter));
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center'>No production history found.</td></tr>";
+        return;
+      }
+
+      tbody.innerHTML = "";
+      filtered.forEach(b => {
+        let statusBadge = `<span class="pending">Pending</span>`;
+        if (b.status === "Approved") statusBadge = `<span class="success">Approved</span>`;
+        if (b.status === "Rejected") statusBadge = `<span class="status-out">Rejected</span>`;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${b.product}</td>
+          <td>${b.quantity}</td>
+          <td>${b.producedBy}</td>
+          <td>${new Date(b.production_date).toLocaleDateString()}</td>
+          <td>${statusBadge}</td>
+           <td>${new Date(b.expiry_date).toLocaleDateString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error("Failed to load history", err);
+      tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:red;'>Error loading data</td></tr>";
+    });
+}
+
+
+function updateProductionStatus(batchId, status) {
+  if (!confirm(`Are you sure you want to ${status} this batch ? `)) return;
+
+  fetch(`http://127.0.0.1:3000/production/${batchId}/status`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({
-      materialType,
-      product,
-      stock,
-      unitPrice,
-      costPrice,
-      unit,
-      minStock
-    })
+    body: JSON.stringify({ status })
   })
-    .then(res => {
-      if (!res.ok) throw new Error("Inventory save failed");
-      return res.json();
-    })
-    .then(() => {
-      document.getElementById("inventoryFormWrapper").style.display = "none";
-
-      invMsg.innerText = "Inventory updated";
-      invMsg.style.color = "green";
-      document.getElementById("inventoryForm").reset();
-      loadInventory();
+    .then(res => res.json())
+    .then(data => {
+      if (data.message.includes("Insufficient stock")) {
+        alert("Error: " + data.message);
+      } else {
+        loadInventory();
+        refreshKPIsOnly(); // Update all dashboard metrics
+      }
     })
     .catch(err => {
-      invMsg.innerText = err.message;
-      invMsg.style.color = "red";
       console.error(err);
+      alert("Request failed");
     });
-});
+}
+
 
 
 
@@ -1092,7 +1219,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // ===================MY PRODUCTION HISTORY==========//
 
 async function loadMyProductionHistory() {
-  const res = await fetch("http://localhost:3000/production/my-history", {
+  const res = await fetch("http://127.0.0.1:3000/production/my-history", {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -1163,13 +1290,21 @@ function showLowStockAlert(items) {
 
 
 function openAddStock(product) {
-  const wrapper = document.getElementById("inventoryFormWrapper");
-  if (!wrapper) return;
+  // Redirect to Expenses section as requested
+  showSection('expenses');
 
-  wrapper.style.display = "block";
+  const catSelect = document.getElementById("expenseCategory");
+  if (catSelect) {
+    catSelect.value = "🌾 Raw Materials";
+    const event = new Event('change');
+    catSelect.dispatchEvent(event);
+  }
 
-  document.getElementById("invProduct").value = product;
-  document.getElementById("invStock").focus();
+  if (product) {
+    // Material type change will be needed here to populate products
+    // For now we just focus the form
+    document.getElementById("invMaterialType").focus();
+  }
 }
 
 
@@ -1188,7 +1323,7 @@ function openEditInventory(item) {
 
 
 function saveEditInventory() {
-  fetch("http://localhost:3000/inventory/edit", {
+  fetch("http://127.0.0.1:3000/inventory/edit", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -1225,7 +1360,7 @@ function openDeleteInventory(id) {
 
 
 function confirmDelete() {
-  fetch("http://localhost:3000/inventory/delete", {
+  fetch("http://127.0.0.1:3000/inventory/delete", {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -1273,11 +1408,425 @@ if (token) {
 }
 
 // ===========INVOICE DOWNLOAD=====//
+// ================= EXPENSES LOGIC =================
+const expenseItems = {
+  "🌾 Raw Materials": ["Raw Material Purchase"],
+  "💰 Salary": [
+    "Baker's salary", "Counter Staff Salary", "Manager salary",
+    "Daily wage workers", "Overtime Payments"
+  ],
+  "⚡ Utilities": [
+    "Electricity bill", "Water bill", "Gas (LPG/PNG)", "Internet"
+  ],
+  "🏠 Rent": [
+    "Shop rent", "Store area or godown rent"
+  ],
+  "🚚 Transport": [
+    "Fuel for delivery", "Transport charges for raw materials",
+    "Courier services", "Vehicle maintenance linked to delivery"
+  ],
+  "🔧 Maintenance": [
+    "Oven repair", "Mixer/Grinder servicing", "Electrical repairs",
+    "Plumbing fixes", "Small Tool Replacement (Trays, Moulds)"
+  ],
+  "📦 Packaging": [
+    "Bread bags", "Boxes", "Wrappers", "Stickers & labels", "Paper bags"
+  ]
+};
+
+document.getElementById("expenseCategory")?.addEventListener("change", function () {
+  const cat = this.value;
+  const nameSelect = document.getElementById("expenseName");
+  nameSelect.innerHTML = '<option value="">Select Expense</option>';
+
+  if (cat && expenseItems[cat]) {
+    expenseItems[cat].forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item;
+      opt.textContent = item;
+      nameSelect.appendChild(opt);
+    });
+    nameSelect.disabled = false;
+  } else {
+    nameSelect.disabled = true;
+  }
+
+  // Toggle Integrated Inventory Fields & Dynamic Fields
+  const rmFields = document.getElementById("rawMaterialFields");
+  const nameGroup = document.getElementById("expenseNameGroup");
+  const amountGroup = document.getElementById("expenseAmountGroup");
+  const dynamicRow = document.getElementById("expenseDynamicRow");
+  const dynamicLabel = document.getElementById("dynamicLabel");
+  const dynamicInput = document.getElementById("dynamicInput");
+
+  // Toggle REQUIRED attributes to prevent hidden fields from blocking submission
+  const standardName = document.getElementById("expenseName");
+  const standardAmount = document.getElementById("expenseAmount");
+  const isRawMaterial = (cat === "🌾 Raw Materials");
+
+  if (standardName) standardName.required = !isRawMaterial;
+  if (standardAmount) standardAmount.required = !isRawMaterial;
+
+  const invInputs = ["invMaterialType", "invProduct", "invStock", "invMinStock", "invUnitPrice"];
+  invInputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.required = isRawMaterial;
+  });
+
+  if (isRawMaterial) {
+    if (rmFields) rmFields.style.display = "block";
+    if (nameGroup) nameGroup.style.display = "none";
+    if (amountGroup) amountGroup.style.display = "none";
+    if (dynamicRow) dynamicRow.style.display = "none";
+    if (dynamicInput) dynamicInput.value = "";
+
+    if (!document.getElementById("expenseDate").value) {
+      document.getElementById("expenseDate").value = new Date().toISOString().split('T')[0];
+    }
+  } else {
+    if (rmFields) rmFields.style.display = "none";
+    if (nameGroup) nameGroup.style.display = "contents";
+    if (amountGroup) amountGroup.style.display = "contents";
+
+    if (dynamicRow) {
+      const config = {
+        "💰 Salary": { label: "Staff Name", placeholder: "John Doe" },
+        "⚡ Utilities": { label: "Bill/Ref #", placeholder: "#INV-123" },
+        "🏠 Rent": { label: "Month/Period", placeholder: "Jan 2026" },
+        "🚚 Transport": { label: "Vehicle/Trip", placeholder: "DL-01-X" },
+        "🔧 Maintenance": { label: "Service Details", placeholder: "Repair" },
+        "📦 Packaging": { label: "Vendor", placeholder: "PackCo" }
+      };
+
+      if (config[cat]) {
+        dynamicRow.style.display = "flex";
+        dynamicLabel.innerText = config[cat].label;
+        dynamicInput.placeholder = config[cat].placeholder;
+      } else {
+        dynamicRow.style.display = "none";
+        dynamicInput.value = "";
+      }
+    }
+
+    // Clear inventory fields
+    invInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    const invProd = document.getElementById("invProduct");
+    if (invProd) {
+      invProd.innerHTML = '<option value="">Select Item</option>';
+      invProd.disabled = true;
+    }
+  }
+});
+
+document.getElementById("expenseForm")?.addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const expenseId = document.getElementById("expenseId").value;
+  const category = document.getElementById("expenseCategory").value;
+  const msgEl = document.getElementById("expenseMsg");
+
+  let name = "";
+  let amount = 0;
+
+  if (category === "🌾 Raw Materials") {
+    const materialType = document.getElementById("invMaterialType").value;
+    const product = document.getElementById("invProduct").value;
+    const stock = Number(document.getElementById("invStock").value);
+    const unit = document.getElementById("invUnit").value;
+    const minStock = Number(document.getElementById("invMinStock").value);
+    const unitPrice = Number(document.getElementById("invUnitPrice").value);
+    const costPrice = (stock * unitPrice).toFixed(2);
+
+    if (!product || product === "Select Item") {
+      alert("Please select a specific material.");
+      return;
+    }
+
+    try {
+      if (!expenseId) {
+        const invRes = await fetch("http://127.0.0.1:3000/inventory/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ materialType, product, stock, unitPrice, costPrice, unit, minStock })
+        });
+        if (!invRes.ok) throw new Error("Failed to update inventory stock");
+        loadInventory();
+      }
+      name = `Purchase: ${product} (${stock}${unit})`;
+      amount = costPrice;
+    } catch (err) {
+      msgEl.innerText = "❌ " + err.message;
+      msgEl.style.color = "red";
+      return;
+    }
+  } else {
+    name = document.getElementById("expenseName").value;
+    const extra = document.getElementById("dynamicInput").value;
+
+    if (!name || name === "Select Expense") {
+      alert("Please select an expense name.");
+      return;
+    }
+
+    if (extra) name += ` (${extra})`;
+    amount = document.getElementById("expenseAmount").value;
+  }
+
+  const payload = {
+    category,
+    name,
+    amount,
+    date: document.getElementById("expenseDate").value,
+    paymentMethod: document.getElementById("expensePaymentMethod").value
+  };
+
+  const url = expenseId ? `http://127.0.0.1:3000/expenses/${expenseId}` : "http://127.0.0.1:3000/expenses/add";
+  const method = expenseId ? "PUT" : "POST";
+
+  try {
+    const res = await fetch(url, {
+      method: method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+
+    let data = {};
+    const text = await res.text();
+    try { data = JSON.parse(text); } catch (err) { }
+
+    if (res.ok) {
+      msgEl.innerText = expenseId ? "Expense updated! ✅" : "Expense recorded! ✅";
+      msgEl.style.color = "#27ae60";
+
+      // Delay reset so user can see success message
+      setTimeout(() => {
+        resetExpenseForm(true); // true means preserve the message
+        loadExpensesTable();
+        refreshKPIsOnly();
+      }, 1500);
+    } else {
+      msgEl.innerText = "❌ " + (data.message || "Failed to add expense");
+      msgEl.style.color = "red";
+    }
+  } catch (err) {
+    msgEl.innerText = "❌ Connection error: " + err.message;
+    msgEl.style.color = "red";
+  }
+});
+
+// EXPENSE FORM TOGGLE
+const toggleExpenseBtn = document.getElementById("toggleExpenseFormBtn");
+const expenseFormDiv = document.getElementById("expenseFormContainer");
+
+toggleExpenseBtn?.addEventListener("click", () => {
+  expenseFormDiv.style.display = (expenseFormDiv.style.display === "none") ? "block" : "none";
+  toggleExpenseBtn.textContent = (expenseFormDiv.style.display === "block") ? "❌ Cancel Entry" : "➕ Add New Expense";
+  if (expenseFormDiv.style.display === "block") {
+    // Scroll to form
+    expenseFormDiv.scrollIntoView({ behavior: 'smooth' });
+  }
+});
+
+function resetExpenseForm(preserveMsg = false) {
+  document.getElementById("expenseForm").reset();
+  document.getElementById("expenseId").value = "";
+  document.getElementById("expenseNameGroup").style.display = "contents";
+  document.getElementById("expenseAmountGroup").style.display = "contents";
+  document.getElementById("rawMaterialFields").style.display = "none";
+  document.getElementById("expenseDynamicRow").style.display = "none";
+  document.getElementById("expenseName").disabled = true;
+  document.getElementById("expenseSubmitBtn").innerText = "Add Expense";
+  document.getElementById("expenseCancelBtn").style.display = "none";
+
+  const msgEl = document.getElementById("expenseMsg");
+  if (!preserveMsg && msgEl) msgEl.innerText = "";
+
+  // Hide form
+  expenseFormDiv.style.display = "none";
+  toggleExpenseBtn.textContent = "➕ Add New Expense";
+}
+
+async function loadExpensesTable() {
+  const tbody = document.getElementById("expensesTableBody");
+  const tableHead = document.getElementById("expenseTableHead");
+  if (!tbody || !tableHead) return;
+
+  const categoryFilter = document.getElementById("expenseFilterCategory")?.value || "";
+
+  if (categoryFilter === "🌾 Raw Materials") {
+    // SWITCH TO INVENTORY VIEW
+    tableHead.innerHTML = `
+      <tr>
+        <th>Type</th>
+        <th>Raw Material</th>
+        <th>Stock</th>
+        <th>Unit</th>
+        <th>Min Level</th>
+        <th>Unit Price</th>
+        <th>Cost Price</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    try {
+      const res = await fetch("http://127.0.0.1:3000/inventory", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const items = await res.json();
+      tbody.innerHTML = "";
+
+      if (!Array.isArray(items) || items.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>No inventory items found.</td></tr>";
+        return;
+      }
+
+      items.forEach(i => {
+        let statusText = "In Stock";
+        let statusClass = "status-ok";
+        if (i.stock === 0) {
+          statusText = "Out of Stock";
+          statusClass = "status-out";
+        } else if (i.stock <= i.minStock) {
+          statusText = "Low Stock";
+          statusClass = "status-low";
+        }
+
+        const unitPriceNum = i.unitPrice || (i.stock > 0 ? (i.costPrice / i.stock) : 0);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${i.materialType || "-"}</td>
+          <td style="text-transform: capitalize;">${i.product}</td>
+          <td>${i.stock}</td>
+          <td>${i.unit || "-"}</td>
+          <td>${i.minStock ?? "-"}</td>
+          <td>₹${Number(unitPriceNum).toFixed(2)}</td>
+          <td>₹${Number(i.costPrice || 0).toFixed(2)}</td>
+          <td><span class="${statusClass}">${statusText}</span></td>
+          <td>
+            <button class="btn-xs edit" onclick='openEditInventory(${JSON.stringify(i)})'>Edit</button>
+            <button class="btn-xs delete" onclick="openDeleteInventory(${i.id})">Del</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error("Failed to load inventory:", err);
+    }
+  } else {
+    // SWITCH TO EXPENSE VIEW
+    tableHead.innerHTML = `
+      <tr>
+        <th>Category</th>
+        <th>Expense Name</th>
+        <th>Amount</th>
+        <th>Method</th>
+        <th>Paid By</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    const queryStr = categoryFilter ? `?category=${encodeURIComponent(categoryFilter)}` : "";
+    try {
+      const res = await fetch(`http://127.0.0.1:3000/expenses${queryStr}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const expenses = await res.json();
+      tbody.innerHTML = "";
+
+      if (!Array.isArray(expenses) || expenses.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>No expenses found.</td></tr>";
+        return;
+      }
+
+      [...expenses].reverse().forEach(exp => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${exp.category}</td>
+          <td>${exp.name}</td>
+          <td>₹${Number(exp.amount).toFixed(2)}</td>
+          <td>${exp.paymentMethod}</td>
+          <td>${exp.paidBy}</td>
+          <td>${formatDate(exp.date)}</td>
+          <td>
+            <button class="btn-xs edit" onclick='editExpense(${JSON.stringify(exp)})'>Edit</button>
+            <button class="btn-xs delete" onclick="deleteExpense(${exp.id})">Del</button>
+            <button class="btn-xs download" onclick="downloadExpenseInvoice(${exp.id})">Invoice</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error("Failed to load expenses:", err);
+    }
+  }
+}
+
+document.getElementById("expenseFilterCategory")?.addEventListener("change", loadExpensesTable);
+
+window.editExpense = function (exp) {
+  document.getElementById("expenseId").value = exp.id;
+  document.getElementById("expenseCategory").value = exp.category;
+
+  // Trigger sub-cat dropdown & field toggles
+  const catEvent = new Event('change');
+  document.getElementById("expenseCategory").dispatchEvent(catEvent);
+
+  if (exp.category === "🌾 Raw Materials") {
+    // Extract product name and qty from expense name if needed, 
+    // but we usually want the user to pick from inventory selectors.
+    // For now we just focus the inventory fields
+    document.getElementById("invMaterialType").focus();
+  } else {
+    document.getElementById("expenseName").value = exp.name;
+    document.getElementById("expenseAmount").value = exp.amount;
+  }
+
+  // Show form if it's hidden
+  if (expenseFormDiv) expenseFormDiv.style.display = "block";
+  if (toggleExpenseBtn) toggleExpenseBtn.textContent = "❌ Cancel Edit";
+
+  document.getElementById("expenseDate").value = exp.date;
+  document.getElementById("expensePaymentMethod").value = exp.paymentMethod;
+
+  document.getElementById("expenseSubmitBtn").innerText = "Update Expense";
+  document.getElementById("expenseCancelBtn").style.display = "inline-block";
+};
+
+window.deleteExpense = async function (id) {
+  if (!confirm("Are you sure you want to delete this expense?")) return;
+
+  try {
+    const res = await fetch(`http://127.0.0.1:3000/expenses/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      loadExpensesTable();
+    } else {
+      alert("Failed to delete expense");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.downloadExpenseInvoice = function (id) {
+  const url = `http://127.0.0.1:3000/expenses/invoice/${id}?token=${token}`;
+  window.open(url, "_blank");
+};
+
+
 function downloadInvoice(saleId) {
   const token = localStorage.getItem("jwtToken");
 
 
-  const url = `http://localhost:3000/invoice/${saleId}?token=${token}`;
+  const url = `http://127.0.0.1:3000/invoice/${saleId}?token=${token}`;
   window.open(url, "_blank");
 }
 
@@ -1286,3 +1835,47 @@ function downloadInvoice(saleId) {
 // DEFAULT LOAD
 // =============================
 document.addEventListener("DOMContentLoaded", loadDashboard);
+
+// ================= OVERRIDE EMPLOYEE PRODUCTION HISTORY =================
+window.loadMyProductionHistory = function () {
+  const tbody = document.querySelector("#productionHistoryTable tbody");
+  if (!tbody) return;
+
+  fetch("http://127.0.0.1:3000/production/my-history", {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+    .then(res => res.json())
+    .then(batches => {
+      tbody.innerHTML = "";
+
+      if (batches.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center'>No production history found.</td></tr>";
+        return;
+      }
+
+      batches.reverse().forEach(b => {
+        const row = document.createElement("tr");
+
+        let statusBadge = `<span class="pending">Pending</span>`;
+        if (b.status === "Approved") statusBadge = `<span class="success">Approved</span>`;
+        if (b.status === "Rejected") statusBadge = `<span class="status-out">Rejected</span>`;
+
+        // Disable Edit if Approved
+        const isDisabled = (b.status === 'Approved' || b.status === 'Rejected') ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
+
+        row.innerHTML = `
+                <td>${b.batchId}</td>
+                <td>${b.product}</td>
+                <td>${b.quantity}</td>
+                <td>${new Date(b.production_date).toLocaleDateString()}</td>
+                <td>${statusBadge}</td>
+                <td>${new Date(b.expiry_date).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn-xs edit" onclick="openEditModal('${b.batchId}', ${b.quantity}, '${b.notes}')" ${isDisabled}>Edit</button>
+                </td>
+            `;
+        tbody.appendChild(row);
+      });
+    })
+    .catch(err => console.error(err));
+};

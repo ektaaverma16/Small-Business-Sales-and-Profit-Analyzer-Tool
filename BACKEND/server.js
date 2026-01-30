@@ -17,6 +17,7 @@ app.use(express.static("public"));
 
 const SECRET_KEY = "mysecretkey";
 const USERS_FILE = "users.json";
+const EXPENSES_FILE = path.join(__dirname, "expenses.json");
 
 
 // ================= EXPIRY RULES =================
@@ -369,6 +370,147 @@ app.delete("/sales/:id", verifyToken, (req, res) => {
   res.json({ message: "Sale deleted successfully" });
 });
 
+// ================= EXPENSES =================
+
+function loadExpenses() {
+  if (!fs.existsSync(EXPENSES_FILE)) {
+    fs.writeFileSync(EXPENSES_FILE, JSON.stringify([], null, 2));
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(EXPENSES_FILE, "utf-8"));
+}
+
+function saveExpenses(expenses) {
+  fs.writeFileSync(EXPENSES_FILE, JSON.stringify(expenses, null, 2));
+}
+
+app.post("/expenses/add", verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  console.log("Adding expense:", req.body, "User:", req.user);
+  const { category, name, amount, date, paymentMethod } = req.body;
+
+  if (!category || !name || amount === "" || amount === undefined || !date || !paymentMethod) {
+    console.log("Validation failed:", { category, name, amount, date, paymentMethod });
+    return res.status(400).json({ message: "Invalid expense data" });
+  }
+
+
+  const expenses = loadExpenses();
+
+  const newExpense = {
+    id: Date.now(),
+    category,
+    name,
+    amount: Number(amount),
+    date,
+    paymentMethod,
+    paidBy: req.user.role,
+    addedBy: req.user.username,
+    business: req.user.businessId
+  };
+
+  expenses.push(newExpense);
+  saveExpenses(expenses);
+
+  res.json({ message: "Expense added successfully", expense: newExpense });
+});
+
+app.get("/expenses", verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { category } = req.query;
+  const expenses = loadExpenses();
+  let businessExpenses = expenses.filter(e => e.business === req.user.businessId);
+
+  if (category) {
+    businessExpenses = businessExpenses.filter(e => e.category === category);
+  }
+
+  res.json(businessExpenses);
+});
+
+app.put("/expenses/:id", verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const id = Number(req.params.id);
+  const expenses = loadExpenses();
+  const index = expenses.findIndex(e => e.id === id && e.business === req.user.businessId);
+
+  if (index === -1) {
+    return res.status(404).json({ message: "Expense not found" });
+  }
+
+  // Update expense but protect identity/business fields
+  expenses[index] = {
+    ...expenses[index],
+    ...req.body,
+    id,
+    business: req.user.businessId,
+    paidBy: req.user.role, // Update role to current editor's role
+    addedBy: req.user.username // Update username to current editor
+  };
+  saveExpenses(expenses);
+
+  res.json({ message: "Expense updated successfully" });
+});
+
+app.delete("/expenses/:id", verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const id = Number(req.params.id);
+  let expenses = loadExpenses();
+  const initialLength = expenses.length;
+
+  expenses = expenses.filter(e => !(e.id === id && e.business === req.user.businessId));
+
+  if (expenses.length === initialLength) {
+    return res.status(404).json({ message: "Expense not found" });
+  }
+
+  saveExpenses(expenses);
+  res.json({ message: "Expense deleted successfully" });
+});
+
+app.get("/expenses/invoice/:id", verifyToken, (req, res) => {
+  const id = Number(req.params.id);
+  const expenses = loadExpenses();
+  const expense = expenses.find(e => e.id === id && e.business === req.user.businessId);
+
+  if (!expense) {
+    return res.status(404).json({ message: "Expense not found" });
+  }
+
+  const doc = new PDFDocument({ margin: 50 });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename=expense-${id}.pdf`);
+
+  doc.pipe(res);
+  doc.fontSize(20).text("EXPENSE VOUCHER", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12);
+  doc.text(`Voucher No: EXP-${expense.id}`);
+  doc.text(`Date: ${expense.date}`);
+  doc.text(`Category: ${expense.category}`);
+  doc.text(`Expense Name: ${expense.name}`);
+  doc.text(`Paid By: ${expense.paidBy}`);
+  doc.text(`Payment Method: ${expense.paymentMethod}`);
+  doc.moveDown();
+  doc.fontSize(14).text(`AMOUNT: ₹${expense.amount}`, { bold: true });
+  doc.moveDown(2);
+  doc.text("-----------------------", { align: "right" });
+  doc.text("Signature", { align: "right" });
+  doc.end();
+});
+
 // ================= INVENTORY =================
 
 const INVENTORY_FILE = path.join(__dirname, "inventory.json");
@@ -515,27 +657,21 @@ app.post("/production/add", verifyToken, (req, res) => {
       }
     }
 
-    // ================= DEDUCT RAW MATERIALS =================
+    // ================= DEDUCT RAW MATERIALS (DEFERRED TO APPROVAL) =================
+    // Logic moved to approval endpoint to ensure stock is only adjusted when approved.
+
+    /* 
     for (let mat in recipe.materials) {
       const requiredQty = recipe.materials[mat] * quantity;
-
-      const invItem = inventory.find(
-        i =>
-          i.product.toLowerCase() === mat.toLowerCase() &&
-          i.business === req.user.businessId
-      );
-
+      const invItem = inventory.find(i => i.product.toLowerCase() === mat.toLowerCase() && i.business === req.user.businessId);
       if (invItem) invItem.stock -= requiredQty;
-    }
+    } 
+    */
   }
 
-  // ================= ADD FINISHED GOODS =================
-  const finishedItem = inventory.find(
-    i =>
-      i.product.toLowerCase() === product.toLowerCase() &&
-      i.business === req.user.businessId
-  );
-
+  // ================= ADD FINISHED GOODS (DEFERRED TO APPROVAL) =================
+  /*
+  const finishedItem = inventory.find(i => i.product.toLowerCase() === product.toLowerCase() && i.business === req.user.businessId);
   if (finishedItem) {
     finishedItem.stock += Number(quantity);
   } else {
@@ -549,8 +685,8 @@ app.post("/production/add", verifyToken, (req, res) => {
       business: req.user.businessId
     });
   }
-
   saveInventory(inventory);
+  */
 
   // ================= CREATE PRODUCTION BATCH =================
   const production = loadProduction();
@@ -564,7 +700,7 @@ app.post("/production/add", verifyToken, (req, res) => {
     producedBy: req.user.username,
     production_date: prodDate.toISOString(),
     expiry_date: expiryDate.toISOString(),
-    status: "PENDING_APPROVAL",
+    status: "Pending",
     notes: notes || "",
     business: req.user.businessId
   });
@@ -575,6 +711,78 @@ app.post("/production/add", verifyToken, (req, res) => {
     message: "Production batch created",
     batchId
   });
+});
+
+// ================= UPDATE PRODUCTION STATUS (APPROVE/REJECT) =================
+app.put("/production/:batchId/status", verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { status } = req.body; // "Approved" or "Rejected"
+  const { batchId } = req.params;
+
+  const production = loadProduction();
+  const batchIndex = production.findIndex(p => p.batchId === batchId && p.business === req.user.businessId);
+
+  if (batchIndex === -1) {
+    return res.status(404).json({ message: "Production batch not found" });
+  }
+
+  const batch = production[batchIndex];
+
+  if (batch.status === "Approved") {
+    return res.status(400).json({ message: "Batch already approved" });
+  }
+
+  if (status === "Approved") {
+    // EXECUTE INVENTORY DEDUCTION HERE
+    const inventory = loadInventory();
+    const recipes = loadRecipes();
+    const recipe = recipes.find(r => r.product === batch.product);
+
+    if (recipe) {
+      // 1. Check Stock Availability Again
+      for (let mat in recipe.materials) {
+        const requiredQty = recipe.materials[mat] * batch.quantity;
+        const invItem = inventory.find(i => i.product.toLowerCase() === mat.toLowerCase() && i.business === req.user.businessId);
+
+        if (!invItem || invItem.stock < requiredQty) {
+          return res.status(400).json({ message: `Insufficient stock for ${mat} to approve production.` });
+        }
+      }
+
+      // 2. Deduct Stock
+      for (let mat in recipe.materials) {
+        const requiredQty = recipe.materials[mat] * batch.quantity;
+        const invItem = inventory.find(i => i.product.toLowerCase() === mat.toLowerCase() && i.business === req.user.businessId);
+        if (invItem) invItem.stock -= requiredQty;
+      }
+    }
+
+    // 3. Add Finished Goods
+    const finishedItem = inventory.find(i => i.product.toLowerCase() === batch.product.toLowerCase() && i.business === req.user.businessId);
+    if (finishedItem) {
+      finishedItem.stock += Number(batch.quantity);
+    } else {
+      inventory.push({
+        id: Date.now(),
+        product: batch.product,
+        stock: Number(batch.quantity),
+        unit: "pcs",
+        minStock: 0,
+        costPrice: 0,
+        business: req.user.businessId
+      });
+    }
+    saveInventory(inventory);
+  }
+
+  // Update Status
+  batch.status = status;
+  saveProduction(production);
+
+  res.json({ message: `Production ${status}` });
 });
 
 
@@ -612,6 +820,28 @@ app.get("/production/my-history", verifyToken, (req, res) => {
 
     res.json(myHistory);
 
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/production/history", verifyToken, (req, res) => {
+  if (!["Owner", "Manager", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  try {
+    const production = loadProduction();
+
+    // Auto mark expired
+    autoMarkExpired(production);
+
+    const history = production
+      .filter(p => p.business === req.user.businessId)
+      .sort((a, b) => new Date(b.production_date) - new Date(a.production_date));
+
+    res.json(history);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

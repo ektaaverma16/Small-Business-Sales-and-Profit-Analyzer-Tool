@@ -26,5 +26,12 @@
     "role": "Employee",
     "businessType": "Manufacturing",
     "businessId": "MA-2818"
+  },
+  {
+    "username": "Ekta",
+    "password": "1628",
+    "role": "Accountant",
+    "businessType": "Manufacturing",
+    "businessId": "MA-2818"
   }
 ]

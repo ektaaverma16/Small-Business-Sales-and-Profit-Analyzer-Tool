@@ -15,8 +15,13 @@
   --blue: #123c7b;
   --white: #fff;
   --grey: #f5f5f5;
-  --black1: #222;
+  --black1: #3E2A21;
   --black2: #999;
+  --bakery-dark: #3E2A21;
+  --bakery-medium: #4B352A;
+  --bakery-accent: #CA7842;
+  --bakery-light: #fdf6f2;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -154,6 +159,11 @@ body {
   overflow: hidden;
 }
 
+/* EMPLOYEE MODE TOGGLE */
+.main.employee-mode {
+  /* This class now triggers .business-bg visibility */
+}
+
 .main.active {
   width: calc(100% - 70px);
   left: 70px;
@@ -162,20 +172,27 @@ body {
 .business-bg {
   position: absolute;
   top: 60px;
-  /* below topbar */
+  /* Below topbar */
   left: 0;
   width: 100%;
-  height: calc(100vh - 60px);
-  background-color: #fff;
-  /* background-image: url("./bake.jpg"); */
+  height: calc(100% - 60px);
+  z-index: 0;
+  pointer-events: none;
+  background-color: transparent;
+  transition: opacity 0.5s ease;
+  opacity: 0;
+  /* Hidden by default */
+}
+
+/* Show background only in employee mode */
+.main.employee-mode .business-bg {
+  opacity: 0.4;
+  /* More visible background */
+  background-image: url("bake.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-
-  opacity: 0.18;
-  /* reduced for clarity */
-  z-index: 0;
-  pointer-events: none;
+  background-attachment: fixed;
 }
 
 
@@ -288,6 +305,8 @@ body {
   /* scroll ONLY inside active section */
   display: none;
   z-index: 2;
+  background: transparent;
+  /* Ensure background shows through */
 }
 
 .page-section.active {
@@ -364,94 +383,179 @@ body {
 /* -----------------------------
    TABLES
 ------------------------------*/
-.activity-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
+/* -----------------------------
+   FORMS & LAYOUT
+------------------------------*/
+.field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 150px;
 }
 
-.activity-table th,
-.activity-table td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
+.field-item label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  margin-top: 0;
+}
+
+#expenseFormContainer .input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+#expenseFormContainer input,
+#expenseFormContainer select {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fdfdfd;
+  transition: all 0.2s ease;
+}
+
+#expenseFormContainer input:focus,
+#expenseFormContainer select:focus {
+  border-color: var(--bakery-accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(202, 120, 66, 0.15);
+  outline: none;
+}
+
+/* PREMIUM TABLE STYLING */
+.activity-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 15px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  border: 1px solid #eee;
 }
 
 .activity-table th {
+  background: #fdf6f2;
+  /* Light cream/bakery background */
+  color: var(--bakery-dark);
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 18px 15px;
+  border-bottom: 2px solid var(--bakery-accent);
+  text-align: left;
+}
+
+.activity-table td {
+  padding: 14px 12px;
   font-size: 14px;
   color: #555;
-  background: #f0f0f0;
+  border-bottom: 1px solid #f2f4f7;
+  vertical-align: middle;
+  text-align: left;
+}
+
+.activity-table tr:last-child td {
+  border-bottom: none;
+}
+
+.activity-table tr:hover {
+  background-color: #fcfdfe;
+}
+
+.btn-xs {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  margin-right: 4px;
+}
+
+.btn-xs.edit {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.btn-xs.delete {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.btn-xs.download {
+  background: #f1f8e9;
+  color: #388e3c;
+}
+
+.btn-xs:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
 }
 
 .success {
-  color: green;
-  font-weight: bold;
+  color: #2e7d32;
+  font-weight: 600;
+  background: #e8f5e9;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
 }
 
 .pending {
-  color: orange;
-  font-weight: bold;
-}
-
-/* -----------------------------
-   FORMS
-------------------------------*/
-form label {
-  display: block;
-  margin-top: 12px;
-  font-weight: bold;
-}
-
-form input,
-form select {
-  width: 100%;
-  padding: 10px;
-  margin-top: 6px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-form button {
-  margin-top: 18px;
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #2009d3;
-  color: #fff;
-  cursor: pointer;
-}
-
-form button:hover {
-  opacity: 0.9;
+  color: #ef6c00;
+  font-weight: 600;
+  background: #fff3e0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
 }
 
 /* -----------------------------
    BUTTONS
 ------------------------------*/
 .primary-btn {
-  background: #255297;
+  background: linear-gradient(135deg, var(--bakery-dark) 0%, var(--bakery-accent) 100%);
   color: white;
   border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(62, 42, 33, 0.15);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .secondary-btn {
-  background: #f0f0f0;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
+  background: var(--bakery-light);
+  color: var(--bakery-dark);
+  border: 1px solid rgba(62, 42, 33, 0.1);
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
+  transition: var(--transition);
 }
 
-.primary-btn:hover,
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(62, 42, 33, 0.25);
+  filter: brightness(1.05);
+}
+
 .secondary-btn:hover {
-  opacity: 0.9;
+  background: #f8ece4;
+  border-color: var(--bakery-accent);
 }
 
 .delete-btn {
@@ -484,9 +588,53 @@ form button:hover {
     padding: 20px;
   }
 
+
   .sidebar {
     width: 200px;
   }
+}
+
+/* Inventory Toggles */
+.inv-toggle-group {
+  display: flex;
+  gap: 10px;
+  background: #f8f1eb;
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.inv-toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #8d6e63;
+  transition: all 0.2s ease;
+}
+
+.inv-toggle-btn.active {
+  background: #fff;
+  color: #3e2a21;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.inv-toggle-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
+  color: #5d4037;
+}
+
+#productionHistoryFilter {
+  background: #fff;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  animation: fadeIn 0.3s ease;
 }
 
 /* ============================
@@ -591,7 +739,7 @@ canvas {
 
 #addSales {
   padding: 40px 50px;
-  background: #fdfdfd;
+  background: transparent;
 }
 
 #addSales h2 {
@@ -618,11 +766,12 @@ canvas {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
+  /* Semi-transparent */
   padding: 30px;
   border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   max-width: 600px;
   margin-top: 20px;
 }
@@ -776,11 +925,12 @@ canvas {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
+  /* Semi-transparent */
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .production-table thead {
@@ -1017,36 +1167,24 @@ canvas {
 .activity-table,
 .production-table,
 .card {
-  background: rgba(255, 255, 255, 0.55);  /* semi-transparent */
-/* backdrop-filter: blur(10px); */
-/* -webkit-backdrop-filter: blur(10px); */
-
-/* border: 1px solid rgba(255, 255, 255, 0.35); */
-/* box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}  */
-
-#showProductionFormBtn {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  height: fit-content;
+  background: var(--white);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(62, 42, 33, 0.05);
+  border: 1px solid rgba(62, 42, 33, 0.06);
+  margin-bottom: 24px;
+  transition: var(--transition);
 }
 
-#showProductionFormBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+.card:hover {
+  box-shadow: 0 8px 30px rgba(62, 42, 33, 0.08);
 }
 
-#showProductionFormBtn:active {
-  transform: scale(0.97);
-}
+/* Production Form Toggle Button - Now uses .primary-btn class */
+/* All styles inherited from .primary-btn and .primary-btn:hover */
 
+/* OLD PRODUCTION STYLES - Now replaced by .production-form-container */
+/*
 #production {
   background: #ffffff;
   padding: 25px 30px;
@@ -1141,6 +1279,7 @@ canvas {
   box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
   transform: translateY(-1px);
 }
+*/
 
 @keyframes fadeSlideIn {
   from {
@@ -1374,21 +1513,22 @@ canvas {
 
 .addUpdate-btn {
   width: auto;
-  padding: 10px 28px;
-
-  background: #1e4fa3;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, var(--bakery-medium), var(--bakery-accent));
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: var(--transition);
+  box-shadow: 0 4px 10px rgba(75, 53, 42, 0.2);
 }
 
 .addUpdate-btn:hover {
-  background: #163d80;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(75, 53, 42, 0.3);
+  filter: brightness(1.1);
 }
 
 .activity-table td:last-child {
@@ -1695,4 +1835,482 @@ canvas {
 /* Active */
 .sales-table .delete-btn:active {
   transform: scale(0.97);
+}
+
+/* ================= EXPENSE BUTTONS ================= */
+.btn-xs {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.btn-xs.edit {
+  background: #ff9800;
+  color: #fff;
+}
+
+.btn-xs.edit:hover {
+  background: #f57c00;
+}
+
+.btn-xs.delete {
+  background: #f44336;
+  color: #fff;
+}
+
+.btn-xs.delete:hover {
+  background: #d32f2f;
+}
+
+.btn-xs.download {
+  background: #2196f3;
+  color: #fff;
+}
+
+.btn-xs.download:hover {
+  background: #1976d2;
+}
+
+/* ================= PRODUCTION ENTRY SECTION STYLING ================= */
+
+.production-entry-section {
+  margin-top: 30px;
+  padding: 0 40px;
+}
+
+.production-form-container {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+  margin-bottom: 2rem;
+  animation: fadeSlideIn 0.3s ease;
+}
+
+/* Production Form Input Rows */
+.production-form-container .input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.production-form-container .field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.production-form-container .field-item label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  margin-top: 0;
+}
+
+/* Production Form Inputs & Selects */
+.production-form-container input,
+.production-form-container select {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fdfdfd;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.production-form-container input:focus,
+.production-form-container select:focus {
+  border-color: var(--bakery-accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(202, 120, 66, 0.15);
+  outline: none;
+}
+
+.production-form-container input:disabled,
+.production-form-container select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
+}
+
+/* Production Form Button Row */
+.production-form-container .btn-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+/* Production Submit Button */
+.production-form-container .btn-primary {
+  background: linear-gradient(135deg, var(--bakery-dark) 0%, var(--bakery-accent) 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(62, 42, 33, 0.15);
+  font-size: 14px;
+}
+
+.production-form-container .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(62, 42, 33, 0.25);
+  filter: brightness(1.05);
+}
+
+.production-form-container .btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Production Message Styling */
+#prodMsg {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+#prodMsg.success {
+  color: #2e7d32;
+}
+
+#prodMsg.error {
+  color: #d32f2f;
+}
+
+/* Animation for form appearance */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design for Production Form */
+@media (max-width: 768px) {
+  .production-entry-section {
+    padding: 0 20px;
+  }
+
+  .production-form-container {
+    padding: 20px;
+  }
+
+  .production-form-container .input-row {
+    flex-direction: column;
+  }
+
+  .production-form-container .field-item {
+    min-width: 100%;
+  }
+}
+
+/* Override old production styles to prevent conflicts */
+#production.production-form-container {
+  background: #ffffff;
+  padding: 30px;
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+  max-width: none;
+  animation: fadeSlideIn 0.3s ease;
+}
+
+#production.production-form-container h2 {
+  display: none;
+  /* Hide old h2 as we have new header */
+}
+
+#production.production-form-container .salesInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+#production.production-form-container .buttonWrapper {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+#production.production-form-container .addSales-btn {
+  background: linear-gradient(135deg, var(--bakery-dark) 0%, var(--bakery-accent) 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(62, 42, 33, 0.15);
+  font-size: 14px;
+  width: auto;
+  min-width: auto;
+}
+
+#production.production-form-container .addSales-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(62, 42, 33, 0.25);
+  filter: brightness(1.05);
+}
+
+/* ================= DASHBOARD KPIs ================= */
+
+.kpi-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 35px;
+  padding: 10px 0;
+}
+
+.stat-card {
+  background: var(--bakery-light);
+  /* Creamy bakery background */
+  padding: 25px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(62, 42, 33, 0.05);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(62, 42, 33, 0.1);
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(202, 120, 66, 0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.statName {
+  color: #8D6E63;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 12px;
+  z-index: 1;
+}
+
+.stat-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.stat-value {
+  color: var(--bakery-dark);
+  font-size: 1.8rem;
+  font-weight: 700;
+  z-index: 1;
+  font-family: 'Ubuntu', sans-serif;
+  flex-shrink: 0;
+}
+
+.trend-indicator {
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.trend-up {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.trend-up::before {
+  content: "▲";
+  margin-right: 4px;
+}
+
+.trend-down {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.trend-down::before {
+  content: "▼";
+  margin-right: 4px;
+}
+
+/* HIGHLIGHTED CARD - NET PROFIT (VIBRANT & VISIBLE) */
+.net-profit-card {
+  background: rgba(39, 174, 96, 0.18);
+  /* Stronger green visibility */
+  border: 2px solid rgba(39, 174, 96, 0.4);
+  /* Clearer green border */
+  transform: scale(1.03);
+  box-shadow: 0 12px 35px rgba(39, 174, 96, 0.25);
+  /* Deep green glow shadow */
+  z-index: 2;
+}
+
+.net-profit-card .statName {
+  color: #1b5e20;
+  /* High-contrast emerald for label */
+  font-weight: 700;
+}
+
+.net-profit-card .stat-value {
+  color: #000;
+  /* Black for visibility on highlighted card */
+  /* Bold emerald for value visibility */
+  font-size: 2.2rem;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5);
+  /* Subtle lift */
+}
+
+.net-profit-card .trend-indicator {
+  color: #ffffff;
+  background: #27ae60;
+  /* Solid green for contrast */
+  font-weight: bold;
+}
+
+.net-profit-card:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 16px 48px rgba(39, 174, 96, 0.35);
+}
+
+.net-profit-card::after {
+  background: radial-gradient(circle, rgba(39, 174, 96, 0.15) 0%, transparent 70%);
+}
+
+/* Specific styling for counts (non-currency values) */
+#empItemsSoldToday,
+#empTodayProduction,
+#empPendingApprovals {
+  color: var(--bakery-accent);
+}
+
+.net-profit-card #netProfit {
+  color: #fff;
+}
+
+/* Animation for KPI Cards */
+@keyframes kpiFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-card {
+  animation: kpiFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+.stat-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.stat-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.stat-card:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.stat-card:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.stat-card:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.stat-card:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+/* Dashboard Charts Layout */
+.charts-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 25px;
+  margin-top: 20px;
+}
+
+.chart-card {
+  background: var(--white);
+  padding: 25px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(240, 240, 240, 0.8);
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+  .kpi-wrapper {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+
+  .charts-grid-container {
+    grid-template-columns: 1fr;
+  }
+
+  .net-profit-card {
+    grid-column: span 2;
+    transform: none;
+    margin-bottom: 5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .net-profit-card {
+    grid-column: span 1;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
 }

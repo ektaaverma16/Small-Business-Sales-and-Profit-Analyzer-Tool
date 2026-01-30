@@ -69,6 +69,12 @@
             <span class="title">Inventory</span>
           </a>
         </li>
+        <li class="owner-only accountant-only">
+          <a href="javascript:void(0)" onclick="showSection('expenses')">
+            <span class="icon"><ion-icon name="card-outline"></ion-icon></span>
+            <span class="title">Expenses</span>
+          </a>
+        </li>
         <li class="employee-only">
           <a href="javascript:void(0)" onclick="showSection('addSales')">
             <span class="icon"><ion-icon name="add-outline"></ion-icon></span>
@@ -116,50 +122,92 @@
 
           <!-- ================= OWNER & MANAGER KPIs ================= -->
 
-          <div class="stat-card owner-only manager-only">
+          <div class="stat-card owner-only manager-only accountant-only">
             <h4 class="statName">Sales Today</h4>
-            <p class="stat-value" id="salesToday">₹0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="salesToday">₹0</p>
+              <span class="trend-indicator" id="salesTodayTrend"></span>
+            </div>
           </div>
 
-          <div class="stat-card owner-only manager-only">
+          <div class="stat-card owner-only manager-only accountant-only">
             <h4 class="statName">Monthly Sales</h4>
-            <p class="stat-value" id="monthlySales">₹0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="monthlySales">₹0</p>
+              <span class="trend-indicator" id="monthlySalesTrend"></span>
+            </div>
           </div>
 
-          <div class="stat-card owner-only manager-only">
+          <div class="stat-card owner-only manager-only accountant-only">
+            <h4 class="statName">Total Expenses</h4>
+            <div class="stat-info">
+              <p class="stat-value" id="totalExpenses">₹0</p>
+              <span class="trend-indicator" id="totalExpensesTrend"></span>
+            </div>
+          </div>
+
+          <div class="stat-card owner-only manager-only accountant-only net-profit-card">
+            <h4 class="statName">Net Profit</h4>
+            <div class="stat-info">
+              <p class="stat-value" id="netProfit">₹0</p>
+              <span class="trend-indicator" id="netProfitTrend"></span>
+            </div>
+          </div>
+
+          <div class="stat-card owner-only manager-only accountant-only">
             <h4 class="statName">Avg Order Value</h4>
-            <p class="stat-value" id="avgOrderValue">₹0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="avgOrderValue">₹0</p>
+              <span class="trend-indicator" id="avgOrderTrend"></span>
+            </div>
           </div>
 
-          <div class="stat-card owner-only manager-only">
+          <div class="stat-card owner-only manager-only accountant-only">
             <h4 class="statName">Total Revenue</h4>
-            <p class="stat-value" id="totalRevenue">₹0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="totalRevenue">₹0</p>
+              <span class="trend-indicator" id="totalRevenueTrend"></span>
+            </div>
           </div>
 
           <!-- ================= EMPLOYEE KPIs ================= -->
 
           <div class="stat-card employee-only">
             <h4 class="statName">Today's Sales</h4>
-            <p class="stat-value" id="empSalesToday">₹0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="empSalesToday">₹0</p>
+              <span class="trend-indicator" id="empSalesTodayTrend"></span>
+            </div>
           </div>
 
           <div class="stat-card employee-only">
             <h4 class="statName">Items Sold Today</h4>
-            <p class="stat-value" id="empItemsSoldToday">0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="empItemsSoldToday">0</p>
+              <span class="trend-indicator" id="empItemsSoldTrend"></span>
+            </div>
           </div>
 
           <div class="stat-card employee-only">
             <h4 class="statName">Today's Production</h4>
-            <p class="stat-value" id="empTodayProduction">0</p>
+            <div class="stat-info">
+              <p class="stat-value" id="empTodayProduction">0</p>
+              <span class="trend-indicator" id="empTodayProductionTrend"></span>
+            </div>
+          </div>
+
+          <div class="stat-card employee-only">
+            <h4 class="statName">Pending Approvals</h4>
+            <div class="stat-info">
+              <p class="stat-value" id="empPendingApprovals">0</p>
+              <span class="trend-indicator" id="empPendingApprovalsTrend"></span>
+            </div>
           </div>
         </div>
 
         <section class="production-history employee-only">
           <div class="table-header">
             <h3>My Production History</h3>
-            <button id="showProductionFormBtn" class="btn btn-primary">
-              ➕ Add New Production
-            </button>
           </div>
 
           <table id="productionHistoryTable" class="production-table">
@@ -206,67 +254,86 @@
 
 
         <!-- ================= DAILY PRODUCTION ENTRY ================= -->
-        <div id="production" class="employee-only">
+        <section class="production-entry-section employee-only">
+          <div class="header-with-btn"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #f8f1eb; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #3E2A21; display: flex; align-items: center; gap: 12px;">
+              <span style="background: #f8f1eb; padding: 8px; border-radius: 12px;">🧁</span> Daily Production Entry
+            </h2>
+            <button id="showProductionFormBtn" class="primary-btn">
+              ➕ Add New Production
+            </button>
+          </div>
 
-          <h2>🧁 Daily Production Entry</h2>
-
-          <div class="card">
+          <div id="production" class="production-form-container" style="display: none;">
             <form id="productionForm">
-              <div class="salesInput">
+              <div class="input-row">
+                <div class="field-item">
+                  <label>Category</label>
+                  <select id="prodCategory" required>
+                    <option value="">Select Category</option>
+                    <option value="Cakes">🍰 Cakes</option>
+                    <option value="Pastries and Desserts">🧁 Pastries & Desserts</option>
+                    <option value="Breads and Buns">🥐 Breads & Buns</option>
+                    <option value="Savory Veg Items">🥟 Savory Veg Items</option>
+                    <option value="Cookies and Tea Time">🍪 Cookies & Tea Time</option>
+                  </select>
+                </div>
 
-                <label>Category</label>
-                <select id="prodCategory" required>
-                  <option value="">Select Category</option>
-                  <option value="Cakes">🍰 Cakes</option>
-                  <option value="Pastries and Desserts">🧁 Pastries & Desserts</option>
-                  <option value="Breads and Buns">🥐 Breads & Buns</option>
-                  <option value="Savory Veg Items">🥟 Savory Veg Items</option>
-                  <option value="Cookies and Tea Time">🍪 Cookies & Tea Time</option>
-                </select>
+                <div class="field-item">
+                  <label>Product</label>
+                  <select id="prodProduct" required disabled>
+                    <option value="">Select Product</option>
+                  </select>
+                </div>
 
-                <label>Product</label>
-                <select id="prodProduct" required disabled>
-                  <option value="">Select Product</option>
-                </select>
+                <div class="field-item">
+                  <label>Quantity Produced</label>
+                  <input type="number" id="prodQuantity" min="1" required />
+                </div>
 
-                <label>Quantity Produced</label>
-                <input type="number" id="prodQuantity" min="1" required />
-
-                <label>Production Date</label>
-                <input type="date" id="prodDate" required />
-
-                <label>Notes (Optional)</label>
-                <input type="text" id="prodNotes" placeholder="Morning batch" />
-
+                <div class="field-item">
+                  <label>Production Date</label>
+                  <input type="date" id="prodDate" required />
+                </div>
               </div>
 
-              <div class="buttonWrapper">
-                <button type="submit" class="addSales-btn">Submit Production</button>
-                <p id="prodMsg"></p>
+              <div class="input-row" style="margin-top: 15px;">
+                <div class="field-item" style="flex: 1;">
+                  <label>Notes (Optional)</label>
+                  <input type="text" id="prodNotes" placeholder="e.g., Morning batch, Special order" />
+                </div>
+              </div>
+
+              <div class="btn-row" style="justify-content: flex-start; gap: 15px; margin-top: 20px;">
+                <button type="submit" class="btn-primary" style="width: auto; padding: 10px 30px;">
+                  Submit Production
+                </button>
+                <p id="prodMsg" style="margin: 0; font-weight: 600;"></p>
               </div>
             </form>
           </div>
-
-        </div>
+        </section>
 
 
 
 
         <!-- ================= CHARTS ================= -->
+        <div class="charts-grid-container owner-only manager-only accountant-only">
 
-        <!-- PROFIT & LOSS BAR CHART -->
-        <div class="dashboard-card owner-only manager-only chart-card">
-          <h3 class="barchart">Profit vs Loss</h3>
-          <div class="chart-container">
-            <canvas id="profitLossChart"></canvas>
+          <!-- PROFIT & LOSS BAR CHART -->
+          <div class="chart-card">
+            <h3 class="barchart">Profit vs Loss</h3>
+            <div class="chart-container" style="height: 300px;">
+              <canvas id="profitLossChart"></canvas>
+            </div>
           </div>
-        </div>
 
-        <!-- MONTHLY PROFIT GRAPH -->
-        <div class="dashboard-card owner-only manager-only chart-card">
-          <h3 class="monthlychart"> Monthly Profit Trend</h3>
-          <div class="chart-container">
-            <canvas id="monthlyProfitChart"></canvas>
+          <div class="chart-card">
+            <h3 class="monthlychart">Monthly Profit Trend</h3>
+            <div class="chart-container" style="height: 300px;">
+              <canvas id="monthlyProfitChart"></canvas>
+            </div>
           </div>
         </div>
 
@@ -385,6 +452,175 @@
 
       </div>
 
+      <!-- ================= EXPENSES ================= -->
+      <div id="expenses" class="page-section owner-only accountant-only">
+        <div class="header-with-btn"
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #f8f1eb; padding-bottom: 15px;">
+          <h2 style="margin: 0; color: #3E2A21; display: flex; align-items: center; gap: 12px;">
+            <span style="background: #f8f1eb; padding: 8px; border-radius: 12px;">📓</span> Expenses Management
+          </h2>
+          <button id="toggleExpenseFormBtn" class="primary-btn">
+            ➕ Add New Expense
+          </button>
+        </div>
+
+        <div id="expenseFormContainer" class="card"
+          style="display: none; margin-bottom: 2rem; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <form id="expenseForm">
+            <!-- existing expense form fields -->
+            <input type="hidden" id="expenseId" />
+            <div class="input-row">
+              <div class="field-item">
+                <label>Category</label>
+                <select id="expenseCategory" required>
+                  <option value="">Select Category</option>
+                  <option value="🌾 Raw Materials">🌾 Raw Materials</option>
+                  <option value="⚡ Utilities">⚡ Utilities</option>
+                  <option value="💰 Salary">💰 Salary</option>
+                  <option value="🏠 Rent">🏠 Rent</option>
+                  <option value="🚚 Transport">🚚 Transport</option>
+                  <option value="🔧 Maintenance">🔧 Maintenance</option>
+                  <option value="📦 Packaging">📦 Packaging</option>
+                </select>
+              </div>
+
+              <div id="expenseNameGroup" class="field-item" style="display:contents;">
+                <label>Expense Name</label>
+                <select id="expenseName" required disabled>
+                  <option value="">Select Expense</option>
+                </select>
+              </div>
+
+              <div id="expenseAmountGroup" class="field-item" style="display:contents;">
+                <label>Amount (₹)</label>
+                <input type="number" id="expenseAmount" min="0" step="0.01" required />
+              </div>
+
+              <div class="field-item">
+                <label>Date</label>
+                <input type="date" id="expenseDate" required />
+              </div>
+            </div>
+
+            <div id="rawMaterialFields" style="display:none; width: 100%; margin-top: 15px;">
+              <div class="input-row">
+                <div class="field-item">
+                  <label>Material Type</label>
+                  <select id="invMaterialType">
+                    <option value="">Select Category</option>
+                    <option value="🌾 Base Flours & Starches">🌾 Base Flours & Starches</option>
+                    <option value="🍬 Sweeteners">🍬 Sweeteners</option>
+                    <option value="🧈 Fats & Dairy">🧈 Fats & Dairy</option>
+                    <option value="🧪 Leavening & Baking Agents">🧪 Leavening & Baking Agents</option>
+                    <option value="🍫 Flavours & Enhancers">🍫 Flavours & Enhancers</option>
+                    <option value="🌰 Nuts & Dry Fruits">🌰 Nuts & Dry Fruits</option>
+                    <option value="🧂 Savory Basics & Seasoning">🧂 Savory Basics & Seasoning</option>
+                    <option value="🎨 Additives & Decorations">🎨 Additives & Decorations</option>
+                  </select>
+                </div>
+
+                <div class="field-item">
+                  <label>Item Name</label>
+                  <select id="invProduct" disabled>
+                    <option value="">Select Item</option>
+                  </select>
+                </div>
+
+                <div class="field-item">
+                  <label>Qty</label>
+                  <input type="number" id="invStock" min="0" placeholder="Qty" />
+                </div>
+
+                <div class="field-item">
+                  <label>Unit</label>
+                  <select id="invUnit">
+                    <option value="kg">kg</option>
+                    <option value="grams">grams</option>
+                    <option value="litre">litre</option>
+                    <option value="pcs">pcs</option>
+                  </select>
+                </div>
+
+                <div class="field-item">
+                  <label>Min Stock</label>
+                  <input type="number" id="invMinStock" min="1" placeholder="Min" />
+                </div>
+
+                <div class="field-item">
+                  <label>Price/Unit (₹)</label>
+                  <input type="number" id="invUnitPrice" min="0" step="0.01" placeholder="Price" />
+                </div>
+
+                <input type="hidden" id="invCost" />
+              </div>
+            </div>
+
+            <div class="input-row" style="margin-top: 15px;">
+              <div class="field-item">
+                <label>Payment Method</label>
+                <select id="expensePaymentMethod" required>
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Card">Card</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              <div id="expenseDynamicRow" style="display:none; align-items: center; gap: 10px; flex: 1;">
+                <label id="dynamicLabel">Details</label>
+                <input type="text" id="dynamicInput" placeholder="Enter details..." />
+              </div>
+            </div>
+
+
+            <div class="btn-row" style="justify-content: flex-start; gap: 15px;">
+              <button type="submit" id="expenseSubmitBtn" class="btn-primary"
+                style="width: auto; padding: 10px 30px;">Add Expense</button>
+              <button type="button" id="expenseCancelBtn" class="btn-secondary"
+                style="display:none; width: auto; padding: 10px 30px;" onclick="resetExpenseForm()">Cancel
+                Edit</button>
+            </div>
+            <p id="expenseMsg"></p>
+          </form>
+        </div>
+
+
+        <div class="table-header"
+          style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+          <h3>Expense Logs</h3>
+          <div class="filter-group" style="display: flex; align-items: center; gap: 10px;">
+            <label style="margin: 0; font-size: 14px;">Filter Category:</label>
+            <select id="expenseFilterCategory"
+              style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; width: 200px; margin: 0;">
+              <option value="">All Categories</option>
+              <option value="🌾 Raw Materials">🌾 Raw Materials</option>
+              <option value="⚡ Utilities">⚡ Utilities</option>
+              <option value="💰 Salary">💰 Salary</option>
+              <option value="🏠 Rent">🏠 Rent</option>
+              <option value="🚚 Transport">🚚 Transport</option>
+              <option value="🔧 Maintenance">🔧 Maintenance</option>
+              <option value="📦 Packaging">📦 Packaging</option>
+            </select>
+          </div>
+        </div>
+        <table class="activity-table">
+          <thead id="expenseTableHead">
+            <tr>
+              <th>Category</th>
+              <th>Expense Name</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Paid By</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="expensesTableBody">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+
       <!-- ================= TASKS ================= -->
       <div id="myTasks" class="page-section employee-only">
         <h2>My Tasks</h2>
@@ -430,134 +666,102 @@
 
       <!-- ================= INVENTORY ================= -->
       <div id="inventory" class="page-section owner-only manager-only accountant-only">
-        <div class="table-header">
-          <h2>Inventory</h2>
-          <button class="add-stock-btn" onclick="openAddStock('')">
-            ➕ Add Stock
-          </button>
-        </div>
+        <div class="header-with-btn"
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #f8f1eb; padding-bottom: 15px;">
+          <h2 style="margin: 0; color: #3E2A21; display: flex; align-items: center; gap: 12px;">
+            <span style="background: #f8f1eb; padding: 8px; border-radius: 12px;">🏗️</span> Production
+          </h2>
 
-        <table class="inventory-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Raw Material</th>
-              <th>Stock</th>
-              <th>Unit</th>
-              <th>Min Level</th>
-              <th>Unit Price</th>
-              <th>Cost Price</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryTable"></tbody>
-        </table>
-
-
-        <!-- EDIT INVENTORY MODAL -->
-        <div id="editInventoryModal" class="modal hidden">
-          <div class="modal-content">
-            <h3>Edit Inventory</h3>
-
-            <input type="hidden" id="editId">
-
-            <label>Stock Quantity</label>
-            <input type="number" id="editStock">
-
-            <label>Unit</label>
-            <select id="editUnit">
-              <option value="kg">kg</option>
-              <option value="grams">grams</option>
-              <option value="litre">litre</option>
-            </select>
-
-            <label>Minimum Stock</label>
-            <input type="number" id="editMinStock">
-
-            <label>Cost Price</label>
-            <input type="number" id="editCostPrice">
-
-            <div class="modal-actions">
-              <button type="button" onclick="closeEditInventory()">Cancel</button>
-              <button type="button" onclick="saveEditInventory()">Save</button>
-            </div>
+          <div class="inv-toggle-group">
+            <button id="btnShowApprovals" class="inv-toggle-btn active"
+              onclick="switchInventoryView('approvals')">Pending Approvals</button>
+            <button id="btnShowHistory" class="inv-toggle-btn" onclick="switchInventoryView('history')">History</button>
+            <button onclick="loadInventory()" class="secondary-btn" style="margin-left:10px;">🔄 Refresh</button>
           </div>
         </div>
 
-
-        <!-- DELETE INVENTORY MODAL -->
-        <div id="deleteInventoryModal" class="modal hidden">
-          <div class="modal-content">
-            <h3>Delete Inventory</h3>
-            <p>Are you sure you want to delete this item?</p>
-
-            <input type="hidden" id="deleteId">
-
-            <div class="modal-actions">
-              <button type="button" onclick="closeDeleteInventory()">Cancel</button>
-              <button type="button" class="danger" onclick="confirmDelete()">Delete</button>
-            </div>
-          </div>
+        <div id="productionHistoryFilter" style="display:none;">
+          <label style="font-weight:600; color:#555;">Filter Date: </label>
+          <input type="date" id="historyDateFilter" onchange="loadInventoryHistory()"
+            style="padding: 6px; border: 1px solid #ddd; border-radius: 6px;">
+          <button class="secondary-btn"
+            onclick="document.getElementById('historyDateFilter').value=''; loadInventoryHistory()"
+            style="padding: 6px 12px; font-size:12px;">Clear</button>
         </div>
 
-        <div id="inventoryFormWrapper" style="display: none;">
-
-          <div class="card">
-            <form id="inventoryForm">
-              <div class="input-row">
-                <label>Material Type</label>
-                <select id="invMaterialType" required>
-                  <option value="">Select Category</option>
-                  <option value="🌾 Base Flours & Starches">🌾 Base Flours & Starches</option>
-                  <option value="🍬 Sweeteners">🍬 Sweeteners</option>
-                  <option value="🧈 Fats & Dairy">🧈 Fats & Dairy</option>
-                  <option value="🧪 Leavening & Baking Agents">🧪 Leavening & Baking Agents</option>
-                  <option value="🍫 Flavours & Enhancers">🍫 Flavours & Enhancers</option>
-                  <option value="🌰 Nuts & Dry Fruits">🌰 Nuts & Dry Fruits</option>
-                  <option value="🧂 Savory Basics & Seasoning">🧂 Savory Basics & Seasoning</option>
-                  <option value="🎨 Additives & Decorations">🎨 Additives & Decorations</option>
-                </select>
-
-                <label>Item Name</label>
-                <select id="invProduct" required disabled>
-                  <option value="">Select Item</option>
-                </select>
-
-                <label>Stock Quantity</label>
-                <input type="number" id="invStock" min="0" required />
-
-                <label>Unit</label>
-                <select id="invUnit" required>
-                  <option value="kg">kg</option>
-                  <option value="grams">grams</option>
-                  <option value="litre">litre</option>
-                  <option value="pcs">pcs</option>
-                </select>
-
-                <label>Minimum Stock Level</label>
-                <input type="number" id="invMinStock" min="1" required />
-
-                <label>Unit Price (₹)</label>
-                <input type="number" id="invUnitPrice" min="0" step="0.01" required />
-
-                <label>Cost Price (Total ₹)</label>
-                <input type="number" id="invCost" readonly />
-              </div>
-              <div class="btn-row">
-                <button type="submit" class="addUpdate-btn">Add / Update Stock</button>
-              </div>
-              <p id="invMsg"></p>
-            </form>
-
-          </div>
+        <div class="card">
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>Batch ID</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Produced By</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="productionApprovalTable">
+              <!-- Rows injected by JS -->
+            </tbody>
+          </table>
         </div>
-
       </div>
 
 
+      <!-- EDIT INVENTORY MODAL -->
+      <div id="editInventoryModal" class="modal hidden">
+        <div class="modal-content">
+          <h3>Edit Inventory</h3>
+
+          <input type="hidden" id="editId">
+
+          <label>Stock Quantity</label>
+          <input type="number" id="editStock">
+
+          <label>Unit</label>
+          <select id="editUnit">
+            <option value="kg">kg</option>
+            <option value="grams">grams</option>
+            <option value="litre">litre</option>
+          </select>
+
+          <label>Minimum Stock</label>
+          <input type="number" id="editMinStock">
+
+          <label>Cost Price</label>
+          <input type="number" id="editCostPrice">
+
+          <div class="modal-actions">
+            <button type="button" onclick="closeEditInventory()">Cancel</button>
+            <button type="button" onclick="saveEditInventory()">Save</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- DELETE INVENTORY MODAL -->
+      <div id="deleteInventoryModal" class="modal hidden">
+        <div class="modal-content">
+          <h3>Delete Inventory</h3>
+          <p>Are you sure you want to delete this item?</p>
+
+          <input type="hidden" id="deleteId">
+
+          <div class="modal-actions">
+            <button type="button" onclick="closeDeleteInventory()">Cancel</button>
+            <button type="button" class="danger" onclick="confirmDelete()">Delete</button>
+          </div>
+        </div>
+      </div>
+
 
     </div>
+
+
+
+  </div>
   </div>
 
 

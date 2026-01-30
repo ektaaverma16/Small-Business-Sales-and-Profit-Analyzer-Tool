@@ -16,7 +16,7 @@
     "producedBy": "sam12",
     "production_date": "2026-01-29T00:00:00.000Z",
     "expiry_date": "2026-02-01T00:00:00.000Z",
-    "status": "PENDING_APPROVAL",
+    "status": "Approved",
     "notes": "",
     "business": "MA-2818"
   },
@@ -27,7 +27,18 @@
     "producedBy": "sam12",
     "production_date": "2026-01-29T00:00:00.000Z",
     "expiry_date": "2026-02-01T00:00:00.000Z",
-    "status": "PENDING_APPROVAL",
+    "status": "Rejected",
+    "notes": "",
+    "business": "MA-2818"
+  },
+  {
+    "batchId": "BATCH-1769772757043",
+    "product": "White Bread",
+    "quantity": 10,
+    "producedBy": "sam12",
+    "production_date": "2026-01-30T00:00:00.000Z",
+    "expiry_date": "2026-02-02T00:00:00.000Z",
+    "status": "Approved",
     "notes": "",
     "business": "MA-2818"
   }

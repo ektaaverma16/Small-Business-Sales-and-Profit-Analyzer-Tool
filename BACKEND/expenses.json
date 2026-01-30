@@ -1,0 +1,134 @@
+[
+  {
+    "id": 1769765593536,
+    "category": "🌾 Raw Materials",
+    "name": "Purchase: Semolina (5kg)",
+    "amount": 150,
+    "date": "2026-01-30",
+    "paymentMethod": "Cash",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786147098,
+    "category": "🌾 Raw Materials",
+    "name": "Purchase: Whole wheat flour (50kg)",
+    "amount": 2250,
+    "date": "2026-01-30",
+    "paymentMethod": "Cash",
+    "paidBy": "Owner",
+    "addedBy": "krati60",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786192799,
+    "category": "⚡ Utilities",
+    "name": "Electricity bill (#inv-56)",
+    "amount": 25000,
+    "date": "2026-01-30",
+    "paymentMethod": "UPI",
+    "paidBy": "Owner",
+    "addedBy": "krati60",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786258986,
+    "category": "💰 Salary",
+    "name": "Baker's salary (Hary)",
+    "amount": 10000,
+    "date": "2026-01-30",
+    "paymentMethod": "Card",
+    "paidBy": "Owner",
+    "addedBy": "krati60",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786336221,
+    "category": "🏠 Rent",
+    "name": "Shop rent (Jan 2026)",
+    "amount": 35000,
+    "date": "2026-01-30",
+    "paymentMethod": "Bank Transfer",
+    "paidBy": "Owner",
+    "addedBy": "krati60",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786397451,
+    "category": "🚚 Transport",
+    "name": "Fuel for delivery (Mp20-hw)",
+    "amount": 500,
+    "date": "2026-01-30",
+    "paymentMethod": "Cash",
+    "paidBy": "Owner",
+    "addedBy": "krati60",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786589017,
+    "category": "🔧 Maintenance",
+    "name": "Mixer/Grinder servicing (Repair)",
+    "amount": 120,
+    "date": "2026-01-30",
+    "paymentMethod": "Cash",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786688704,
+    "category": "🌾 Raw Materials",
+    "name": "Purchase: Brown sugar (30kg)",
+    "amount": 2400,
+    "date": "2026-01-30",
+    "paymentMethod": "Cash",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786767630,
+    "category": "🌾 Raw Materials",
+    "name": "Purchase: Vegetable oil (300litre)",
+    "amount": 40500,
+    "date": "2026-01-30",
+    "paymentMethod": "Card",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786899264,
+    "category": "🌾 Raw Materials",
+    "name": "Purchase: Condensed milk (20kg)",
+    "amount": 2600,
+    "date": "2026-01-30",
+    "paymentMethod": "Card",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769786977663,
+    "category": "🌾 Raw Materials",
+    "name": "Purchase: Almonds (15kg)",
+    "amount": 10500,
+    "date": "2026-01-30",
+    "paymentMethod": "Card",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  },
+  {
+    "id": 1769787037909,
+    "category": "💰 Salary",
+    "name": "Daily wage workers (Ram)",
+    "amount": 200,
+    "date": "2026-01-30",
+    "paymentMethod": "Cash",
+    "paidBy": "Accountant",
+    "addedBy": "Ekta",
+    "business": "MA-2818"
+  }
+]
