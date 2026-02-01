@@ -22,12 +22,9 @@ if (saleDateInput) {
 document.getElementById("userName").innerText = payload.username;
 document.getElementById("userRole").innerText = payload.role;
 
-// SIDEBAR BUSINESS INFO
-document.getElementById("sidebarBusinessType").innerText =
-  `businessType: "${payload.businessType}"`;
-
-document.getElementById("sidebarBusinessId").innerText =
-  `businessId: "${payload.businessId}"`;
+// TOP BAR BUSINESS INFO
+document.getElementById("topBusinessType").innerText = payload.businessType;
+document.getElementById("topBusinessId").innerText = `ID: ${payload.businessId}`;
 
 
 
@@ -36,9 +33,11 @@ document.getElementById("sidebarBusinessId").innerText =
 // GLOBAL CHART REFERENCES
 // =============================
 let currentUserRole = null;
-let profitLossBarChartInstance = null;
-let monthlyProfitChartInstance = null;
+
 let editingBatchId = null;
+
+// Reports Chart Instances
+let reportChartInstances = {};
 
 // ================= INVENTORY MODAL DOM REFS =================
 const editId = document.getElementById("editId");
@@ -50,6 +49,13 @@ const editCostPrice = document.getElementById("editCostPrice");
 const deleteId = document.getElementById("deleteId");
 
 
+// =============================
+// HELPER FUNCTIONS
+// =============================
+function formatDate(date) {
+  const options = { month: 'short', day: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
 
 function openEditModal(batchId, quantity, notes) {
   console.log("Opening edit for:", batchId);
@@ -167,8 +173,7 @@ function loadDashboard() {
         loadInventory();
       }
 
-
-
+      checkLowStock();
     })
     .catch(err => {
       console.error(err);
@@ -212,13 +217,16 @@ function applyRoleVisibility(role) {
       .forEach(el => el.style.display = "block");
   }
 
-  // ===== EMPLOYEE BACKGROUND =====
+  // ===== EMPLOYEE, OWNER & ACCOUNTANT BACKGROUND =====
   const mainContent = document.querySelector(".main");
   if (mainContent) {
+    mainContent.classList.remove("employee-mode", "owner-mode", "accountant-mode");
     if (role === "Employee") {
       mainContent.classList.add("employee-mode");
-    } else {
-      mainContent.classList.remove("employee-mode");
+    } else if (role === "Owner") {
+      mainContent.classList.add("owner-mode");
+    } else if (role === "Accountant") {
+      mainContent.classList.add("accountant-mode");
     }
   }
 
@@ -232,11 +240,16 @@ function applyRoleVisibility(role) {
     card.style.display = (role === "Employee") ? "flex" : "none";
   });
 
-  // Hide dashboard charts for Employee ONLY
+  // Hide dashboard charts for Employee ONLY (Targeting the container and cards)
   if (role === "Employee") {
     document
-      .querySelectorAll(".dashboard-card.owner-only, .dashboard-card.manager-only")
+      .querySelectorAll(".charts-grid-container.owner-only, .chart-card.owner-only, .chart-card.manager-only")
       .forEach(el => el.style.display = "none");
+  } else {
+    // For Non-Employees, ensure they are visible (if they match the role)
+    document
+      .querySelectorAll(".charts-grid-container.owner-only")
+      .forEach(el => el.style.display = "grid"); // Restore grid layout
   }
 
   // ===== PRODUCTION SECTIONS - EMPLOYEE ONLY =====
@@ -246,10 +259,10 @@ function applyRoleVisibility(role) {
     productionHistorySection.style.display = (role === "Employee") ? "block" : "none";
   }
 
-  // Hide "Daily Production Entry" section from Owner, Manager, and Accountant
-  const productionEntrySection = document.querySelector(".production-entry-section.employee-only");
-  if (productionEntrySection) {
-    productionEntrySection.style.display = (role === "Employee") ? "block" : "none";
+  // Handle Employee Charts Container visibility
+  const empChartsContainer = document.querySelector(".charts-grid-container.employee-only");
+  if (empChartsContainer) {
+    empChartsContainer.style.display = (role === "Employee") ? "grid" : "none";
   }
 
   // Hide the production form itself (legacy code - keeping for compatibility)
@@ -259,11 +272,10 @@ function applyRoleVisibility(role) {
       role.toLowerCase() === "employee" ? "none" : "none"; // Always hidden initially (toggle button controls it)
   }
 
-  // Section visibility controlled ONLY by active class
-  document.querySelectorAll(".page-section")
-    .forEach(sec => sec.classList.remove("active"));
-
-  document.getElementById("dashboard").classList.add("active");
+  // Section visibility is managed by showSection() or initial load
+  if (!document.querySelector(".page-section.active")) {
+    document.getElementById("dashboard").classList.add("active");
+  }
 }
 
 
@@ -309,39 +321,41 @@ function loadUsersTable() {
 // =============================
 // LOAD SALES → KPIs + CHARTS
 // =============================
-function loadSalesForDashboard() {
-  fetch("http://127.0.0.1:3000/sales", {
-    headers: {
-      Authorization: `Bearer ${token}`
+async function loadSalesForDashboard() {
+  try {
+    const [salesRes, expensesRes] = await Promise.all([
+      fetch("http://127.0.0.1:3000/sales", {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch("http://127.0.0.1:3000/expenses", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ]);
+
+    const sales = await salesRes.json();
+    const expenses = await expensesRes.json();
+
+    console.log("Dashboard data loaded:", { salesCount: sales.length, expensesCount: expenses.length });
+
+    // ===== ROLE-BASED KPI SELECTION =====
+    if (currentUserRole === "Employee") {
+      updateEmployeeKPIs(sales);
+    } else {
+      updateKPIs(sales, expenses);
     }
-  })
-    .then(res => res.json())
-    .then(sales => {
-      console.log("Sales data:", sales);
 
-      // ===== ROLE-BASED KPI SELECTION =====
-      if (currentUserRole === "Employee") {
-        updateEmployeeKPIs(sales);
-      }
+    // Charts only for Owner, Manager & Accountant
+    if (currentUserRole !== "Employee") {
+      buildDashboardCharts(sales, expenses);
+    }
 
-      if (currentUserRole === "Manager") {
-        updateKPIs(sales);   // managers use general KPIs
-      }
+    if (currentUserRole !== "Employee") {
+      checkLowStock();
+    }
 
-      if (currentUserRole === "Owner") {
-        updateKPIs(sales);   // owners use general KPIs
-      }
-
-      // Charts only for Owner & Manager
-      if (currentUserRole !== "Employee") {
-        buildProfitLossBarChart(sales);
-        buildMonthlyProfitChart(sales);
-      }
-
-    })
-    .catch(() => {
-      console.error("Failed to load dashboard sales data");
-    });
+  } catch (err) {
+    console.error("Failed to load dashboard data:", err);
+  }
 }
 
 /*------SHOW SECTION-------*/
@@ -361,12 +375,9 @@ function showSection(sectionId) {
   if (sectionId === "dashboard") {
     loadSalesForDashboard();
   }
-
   if (sectionId === "viewSales") {
     loadSalesTable();
   }
-
-
   if (sectionId === "users") {
     loadUsersTable();
   }
@@ -376,8 +387,17 @@ function showSection(sectionId) {
   if (sectionId === "expenses") {
     loadExpensesTable();
   }
+  if (sectionId === "reports") {
+    loadReportsCharts();
+  }
 
+  // Move Low Stock Alert to the new active section if it exists
+  const lowStockAlert = document.getElementById("globalLowStockAlert");
+  if (lowStockAlert) {
+    section.prepend(lowStockAlert);
+  }
 }
+
 
 
 
@@ -432,6 +452,225 @@ function updateEmployeeKPIs(sales) {
       setTrend("empTodayProductionTrend", todayProduction > 0);
       setTrend("empPendingApprovalsTrend", pendingApprovals <= 0, true); // Red down if pending exists
     });
+
+  // Render Charts
+  renderEmployeeCharts(sales);
+}
+
+// Global store for Employee Chart Instances
+let empChartInstances = {};
+
+function renderEmployeeCharts(allSales) {
+  // Filter for THIS employee
+  const mySales = allSales.filter(s => s.addedBy === loggedInEmployee);
+
+  if (mySales.length === 0) return; // No data to chart
+
+  const today = new Date().toLocaleDateString();
+
+  // --- DATA PREP ---
+
+  // 1. Today's Category Breakdown
+  const catStats = {};
+  mySales.forEach(s => {
+    if (new Date(s.date).toLocaleDateString() === today) {
+      catStats[s.itemType] = (catStats[s.itemType] || 0) + s.total;
+    }
+  });
+
+  // 2. Weekly Sales Trend (Last 7 Days)
+  const weeklyLabels = [];
+  const weeklyData = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString(); // Keep this for logic matching if needed, or better normalize
+    weeklyLabels.push(formatDate(d)); // Use formatted date for display
+
+    // Sum sales for this date
+    const dayTotal = mySales
+      .filter(s => new Date(s.date).toLocaleDateString() === dateStr)
+      .reduce((sum, s) => sum + s.total, 0);
+
+    weeklyData.push(dayTotal);
+  }
+
+  // 3. Revenue vs Quantity (Performance - "P&L Proxy")
+  // We'll show this for the same weekly period to give context
+  const weeklyQty = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString();
+
+    const dayQty = mySales
+      .filter(s => new Date(s.date).toLocaleDateString() === dateStr)
+      .reduce((sum, s) => sum + Number(s.quantity), 0);
+
+    weeklyQty.push(dayQty);
+  }
+
+
+  // --- RENDER FUNCTIONS ---
+
+  // Helper to safely destroy old charts
+  const destroyChart = (id) => {
+    if (empChartInstances[id]) {
+      empChartInstances[id].destroy();
+    }
+  };
+
+  // Chart 1: Category (Doughnut)
+  destroyChart('empCategoryChart');
+  const ctxCat = document.getElementById('empCategoryChart')?.getContext('2d');
+  if (ctxCat) {
+    empChartInstances['empCategoryChart'] = new Chart(ctxCat, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(catStats).length ? Object.keys(catStats) : ["No Sales"],
+        datasets: [{
+          data: Object.keys(catStats).length ? Object.values(catStats) : [1],
+          backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10 } },
+          title: { display: true, text: `Total: ₹${Object.values(catStats).reduce((a, b) => a + b, 0)}` }
+        },
+        maintainAspectRatio: false
+      }
+    });
+  }
+
+
+  // Chart 2: Weekly Trend (Line)
+  destroyChart('empWeeklyChart');
+  const ctxWeek = document.getElementById('empWeeklyChart')?.getContext('2d');
+  if (ctxWeek) {
+    empChartInstances['empWeeklyChart'] = new Chart(ctxWeek, {
+      type: 'line',
+      data: {
+        labels: weeklyLabels,
+        datasets: [{
+          label: 'Sales (₹)',
+          data: weeklyData,
+          borderColor: '#d35400',
+          backgroundColor: 'rgba(211, 84, 0, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
+        maintainAspectRatio: false
+      }
+    });
+  }
+
+  // Chart 3: Revenue vs Quantity (Dual Axis Bar/Line)
+  // This serves as the "Performance / P&L" view requested
+  destroyChart('empRevenueChart');
+  const ctxRev = document.getElementById('empRevenueChart')?.getContext('2d');
+  if (ctxRev) {
+    empChartInstances['empRevenueChart'] = new Chart(ctxRev, {
+      type: 'bar',
+      data: {
+        labels: weeklyLabels,
+        datasets: [
+          {
+            label: 'Revenue (₹)',
+            data: weeklyData,
+            backgroundColor: '#27ae60',
+            yAxisID: 'y',
+            order: 2
+          },
+          {
+            label: 'Items Sold',
+            data: weeklyQty,
+            borderColor: '#2980b9',
+            backgroundColor: '#2980b9',
+            type: 'line',
+            yAxisID: 'y1',
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: { display: true, text: 'Revenue (₹)' }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: { drawOnChartArea: false }, // only want the grid lines for one axis to show up
+            title: { display: true, text: 'Qty Sold' }
+          },
+        }
+      }
+    });
+  }
+
+  // Chart 4: Monthly Sales Trend
+  // Calculate daily sales for the current month
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const monthlyLabels = Array.from({ length: daysInMonth }, (_, i) => {
+    return formatDate(new Date(currentYear, currentMonth, i + 1));
+  });
+  const monthlyData = new Array(daysInMonth).fill(0);
+
+  mySales.forEach(s => {
+    const d = new Date(s.date);
+    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+      const day = d.getDate();
+      monthlyData[day - 1] += s.total;
+    }
+  });
+
+  destroyChart('empMonthlyChart');
+  const ctxMonth = document.getElementById('empMonthlyChart')?.getContext('2d');
+  if (ctxMonth) {
+    empChartInstances['empMonthlyChart'] = new Chart(ctxMonth, {
+      type: 'line',
+      data: {
+        labels: monthlyLabels,
+        datasets: [{
+          label: 'Daily Sales (₹)',
+          data: monthlyData,
+          borderColor: '#8e44ad',
+          backgroundColor: 'rgba(142, 68, 173, 0.1)',
+          tension: 0.1,
+          fill: true,
+          pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: `Month Total: ₹${monthlyData.reduce((a, b) => a + b, 0)}` }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Date' } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
 }
 
 
@@ -517,115 +756,559 @@ function setTrend(elementId, isPositive, isExpense = false) {
 // =============================
 // PROFIT & LOSS BAR GRAPH
 // =============================
-function buildProfitLossBarChart(sales) {
-  let profit = 0;
-  let loss = 0;
 
-  sales.forEach(sale => {
-    if (sale.status === "Completed") {
-      profit += sale.total;
-    } else {
-      loss += sale.total;
-    }
-  });
-
-  const ctx = document.getElementById("profitLossChart");
-  if (!ctx) return;
-
-  if (profitLossBarChartInstance) {
-    profitLossBarChartInstance.destroy();
-  }
-
-  profitLossBarChartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Profit", "Loss"],
-      datasets: [{
-        label: "Amount (₹)",
-        data: [profit, loss],
-        backgroundColor: ["#4CAF50", "#F44336"],
-        borderRadius: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => `₹${ctx.raw}`
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: value => `₹${value}`
-          }
-        }
-      }
-    }
-  });
-}
 
 // =============================
 // MONTHLY PROFIT TREND (BAR)
 // =============================
-function buildMonthlyProfitChart(sales) {
-  const monthlyProfit = {};
 
-  sales.forEach(sale => {
-    if (sale.status !== "Completed") return;
 
-    const date = new Date(sale.date);
-    const month = date.toLocaleString("default", { month: "short", year: "numeric" });
+// =============================
+// DASHBOARD CHARTS (BELOW KPIs)
+// =============================
+let dashboardChartInstances = {};
 
-    monthlyProfit[month] = (monthlyProfit[month] || 0) + sale.total;
+function buildDashboardCharts(sales, expenses = []) {
+  const today = new Date().toLocaleDateString();
+
+  // Helper to destroy old charts
+  const destroyChart = (id) => {
+    if (dashboardChartInstances[id]) {
+      dashboardChartInstances[id].destroy();
+    }
+  };
+
+  // ===== TODAY'S SALES BREAKDOWN =====
+  const categoryStats = {};
+  sales.forEach(s => {
+    if (s.status === "Completed" && new Date(s.date).toLocaleDateString() === today) {
+      categoryStats[s.itemType] = (categoryStats[s.itemType] || 0) + s.total;
+    }
   });
 
-  const labels = Object.keys(monthlyProfit);
-  const values = Object.values(monthlyProfit);
-
-  const ctx = document.getElementById("monthlyProfitChart");
-  if (!ctx) return;
-
-  if (monthlyProfitChartInstance) {
-    monthlyProfitChartInstance.destroy();
-  }
-
-  monthlyProfitChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "Monthly Profit (₹)",
-        data: values,
-        backgroundColor: "#2196F3",
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: ctx => `₹${ctx.raw}`
-          }
-        }
+  destroyChart('dashboardTodaySalesChart');
+  const ctxToday = document.getElementById('dashboardTodaySalesChart')?.getContext('2d');
+  if (ctxToday) {
+    dashboardChartInstances['dashboardTodaySalesChart'] = new Chart(ctxToday, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(categoryStats).length ? Object.keys(categoryStats) : ["No Sales Today"],
+        datasets: [{
+          data: Object.keys(categoryStats).length ? Object.values(categoryStats) : [1],
+          backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"],
+          borderWidth: 0
+        }]
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: value => `₹${value}`
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } },
+          title: {
+            display: true,
+            text: `Total: ₹${Object.values(categoryStats).reduce((a, b) => a + b, 0).toLocaleString()}`
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.label}: ₹${ctx.raw.toLocaleString()}`
+            }
           }
         }
       }
+    });
+  }
+
+  // ===== WEEKLY SALES TREND =====
+  const weeklyLabels = [];
+  const weeklyData = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString();
+    weeklyLabels.push(formatDate(d));
+
+    const dayTotal = sales
+      .filter(s => s.status === "Completed" && new Date(s.date).toLocaleDateString() === dateStr)
+      .reduce((sum, s) => sum + s.total, 0);
+
+    weeklyData.push(dayTotal);
+  }
+
+  destroyChart('dashboardWeeklySalesChart');
+  const ctxWeekly = document.getElementById('dashboardWeeklySalesChart')?.getContext('2d');
+  if (ctxWeekly) {
+    dashboardChartInstances['dashboardWeeklySalesChart'] = new Chart(ctxWeekly, {
+      type: 'line',
+      data: {
+        labels: weeklyLabels,
+        datasets: [{
+          label: 'Sales (₹)',
+          data: weeklyData,
+          borderColor: '#d35400',
+          backgroundColor: 'rgba(211, 84, 0, 0.1)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `₹${ctx.raw.toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: value => `₹${value.toLocaleString()}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ===== NEW: MONTHLY PROFIT ANALYSIS (WEEKLY GROUPED) =====
+  const weeklyRevenue = [];
+  const weeklyExpenses = [];
+  const weeklyProfit = [];
+  const weekL = [];
+
+  for (let weekNum = 3; weekNum >= 0; weekNum--) {
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - (weekNum * 7 + 6));
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date();
+    weekEnd.setDate(weekEnd.getDate() - (weekNum * 7));
+    weekEnd.setHours(23, 59, 59, 999);
+
+    weekL.push(`Week ${4 - weekNum}`);
+
+    let weekRev = 0;
+    let weekExp = 0;
+
+    sales.forEach(sale => {
+      if (sale.status === "Completed") {
+        const sDate = new Date(sale.date);
+        if (sDate >= weekStart && sDate <= weekEnd) {
+          weekRev += Number(sale.total);
+        }
+      }
+    });
+
+    expenses.forEach(exp => {
+      const eDate = new Date(exp.date);
+      if (eDate >= weekStart && eDate <= weekEnd) {
+        weekExp += Number(exp.amount);
+      }
+    });
+
+    weeklyRevenue.push(weekRev);
+    weeklyExpenses.push(weekExp);
+    weeklyProfit.push(weekRev - weekExp);
+  }
+
+  destroyChart('dashboardProfitAnalysisChart');
+  const ctxPA = document.getElementById('dashboardProfitAnalysisChart')?.getContext('2d');
+  if (ctxPA) {
+    dashboardChartInstances['dashboardProfitAnalysisChart'] = new Chart(ctxPA, {
+      type: 'bar',
+      data: {
+        labels: weekL,
+        datasets: [
+          {
+            label: 'Revenue',
+            data: weeklyRevenue,
+            backgroundColor: '#5DADE2', // Blue
+            borderRadius: 4
+          },
+          {
+            label: 'Expenses',
+            data: weeklyExpenses,
+            backgroundColor: '#EC7063', // Pink
+            borderRadius: 4
+          },
+          {
+            label: 'Profit',
+            data: weeklyProfit,
+            backgroundColor: '#48C9B0', // Teal
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ₹${ctx.raw.toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: value => `₹${value.toLocaleString()}`
+            }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+}
+
+// =============================
+// LOAD REPORTS CHARTS
+// =============================
+async function loadReportsCharts() {
+  try {
+    // Fetch sales and expenses data
+    const [salesRes, expensesRes] = await Promise.all([
+      fetch("http://127.0.0.1:3000/sales", {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch("http://127.0.0.1:3000/expenses", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ]);
+
+    const sales = await salesRes.json();
+    const expenses = await expensesRes.json();
+
+    // Helper to destroy old charts
+    const destroyChart = (id) => {
+      if (reportChartInstances[id]) {
+        reportChartInstances[id].destroy();
+      }
+    };
+
+    const today = new Date().toLocaleDateString();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // ===== CHART 1: MONTHLY PROFIT ANALYSIS (WEEKLY GROUPED) =====
+    const weeklyRevenue = [];
+    const weeklyExpenses = [];
+    const weeklyProfit = [];
+    const weekLabels = [];
+
+    // Last 4 weeks calculation logic
+    for (let weekNum = 3; weekNum >= 0; weekNum--) {
+      // Calculate start and end of week (7 day windows)
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (weekNum * 7 + 6));
+      weekStart.setHours(0, 0, 0, 0);
+
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - (weekNum * 7));
+      weekEnd.setHours(23, 59, 59, 999);
+
+      weekLabels.push(`Week ${4 - weekNum}`);
+
+      let weekRev = 0;
+      let weekExp = 0;
+
+      // Group Sales
+      sales.forEach(sale => {
+        if (sale.status === "Completed") {
+          const sDate = new Date(sale.date);
+          if (sDate >= weekStart && sDate <= weekEnd) {
+            weekRev += Number(sale.total);
+          }
+        }
+      });
+
+      // Group Expenses
+      expenses.forEach(exp => {
+        const eDate = new Date(exp.date);
+        if (eDate >= weekStart && eDate <= weekEnd) {
+          weekExp += Number(exp.amount);
+        }
+      });
+
+      weeklyRevenue.push(weekRev);
+      weeklyExpenses.push(weekExp);
+      weeklyProfit.push(weekRev - weekExp);
     }
-  });
+
+    destroyChart('reportProfitAnalysisChart');
+    const ctxPA = document.getElementById('reportProfitAnalysisChart')?.getContext('2d');
+    if (ctxPA) {
+      reportChartInstances['reportProfitAnalysisChart'] = new Chart(ctxPA, {
+        type: 'bar',
+        data: {
+          labels: weekLabels,
+          datasets: [
+            {
+              label: 'Revenue',
+              data: weeklyRevenue,
+              backgroundColor: '#5DADE2', // Blue
+              borderRadius: 4
+            },
+            {
+              label: 'Expenses',
+              data: weeklyExpenses,
+              backgroundColor: '#EC7063', // Pink
+              borderRadius: 4
+            },
+            {
+              label: 'Profit',
+              data: weeklyProfit,
+              backgroundColor: '#48C9B0', // Teal
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { boxWidth: 15, font: { size: 12 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.dataset.label}: ₹${ctx.raw.toLocaleString()}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: value => `₹${value.toLocaleString()}`
+              }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+
+
+    // ===== CHART 3: MONTHLY SALES =====
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const monthlyLabels = Array.from({ length: daysInMonth }, (_, i) => {
+      return formatDate(new Date(currentYear, currentMonth, i + 1));
+    });
+    const monthlyData = new Array(daysInMonth).fill(0);
+
+    sales.forEach(s => {
+      if (s.status === "Completed") {
+        const d = new Date(s.date);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+          const day = d.getDate();
+          monthlyData[day - 1] += s.total;
+        }
+      }
+    });
+
+    destroyChart('reportMonthlySalesChart');
+    const ctxMonthly = document.getElementById('reportMonthlySalesChart')?.getContext('2d');
+    if (ctxMonthly) {
+      reportChartInstances['reportMonthlySalesChart'] = new Chart(ctxMonthly, {
+        type: 'line',
+        data: {
+          labels: monthlyLabels,
+          datasets: [{
+            label: 'Daily Sales (₹)',
+            data: monthlyData,
+            borderColor: '#8e44ad',
+            backgroundColor: 'rgba(142, 68, 173, 0.1)',
+            tension: 0.1,
+            fill: true,
+            pointRadius: 2,
+            pointHoverRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: `Month Total: ₹${monthlyData.reduce((a, b) => a + b, 0).toLocaleString()}`
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `₹${ctx.raw.toLocaleString()}`
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Date' } },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: value => `₹${value.toLocaleString()}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ===== CHART 4: TODAY'S SALES BREAKDOWN =====
+    const categoryStats = {};
+    sales.forEach(s => {
+      if (s.status === "Completed" && new Date(s.date).toLocaleDateString() === today) {
+        categoryStats[s.itemType] = (categoryStats[s.itemType] || 0) + s.total;
+      }
+    });
+
+    destroyChart('reportTodaySalesChart');
+    const ctxToday = document.getElementById('reportTodaySalesChart')?.getContext('2d');
+    if (ctxToday) {
+      reportChartInstances['reportTodaySalesChart'] = new Chart(ctxToday, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(categoryStats).length ? Object.keys(categoryStats) : ["No Sales Today"],
+          datasets: [{
+            data: Object.keys(categoryStats).length ? Object.values(categoryStats) : [1],
+            backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12 } },
+            title: {
+              display: true,
+              text: `Total: ₹${Object.values(categoryStats).reduce((a, b) => a + b, 0).toLocaleString()}`
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ₹${ctx.raw.toLocaleString()}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ===== CHART 5: EXPENSES BY CATEGORY =====
+    const expensesByCategory = {};
+    expenses.forEach(exp => {
+      const category = exp.category || "Other";
+      expensesByCategory[category] = (expensesByCategory[category] || 0) + Number(exp.amount);
+    });
+
+    destroyChart('reportExpensesCategoryChart');
+    const ctxExpenses = document.getElementById('reportExpensesCategoryChart')?.getContext('2d');
+    if (ctxExpenses) {
+      reportChartInstances['reportExpensesCategoryChart'] = new Chart(ctxExpenses, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(expensesByCategory).length ? Object.keys(expensesByCategory) : ["No Expenses"],
+          datasets: [{
+            data: Object.keys(expensesByCategory).length ? Object.values(expensesByCategory) : [0],
+            backgroundColor: ['#e74c3c', '#e67e22', '#f39c12', '#16a085', '#2980b9', '#8e44ad', '#c0392b'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                padding: 15
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.label}: ₹${ctx.raw.toLocaleString()}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ===== CHART 6: YEARLY SALES TREND (Monthly Breakdown) =====
+    const yearlyLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const yearlyData = new Array(12).fill(0);
+
+    sales.forEach(s => {
+      if (s.status === "Completed") {
+        const d = new Date(s.date);
+        if (d.getFullYear() === currentYear) {
+          yearlyData[d.getMonth()] += s.total;
+        }
+      }
+    });
+
+    destroyChart('reportYearlySalesChart');
+    const ctxYearly = document.getElementById('reportYearlySalesChart')?.getContext('2d');
+    if (ctxYearly) {
+      reportChartInstances['reportYearlySalesChart'] = new Chart(ctxYearly, {
+        type: 'bar',
+        data: {
+          labels: yearlyLabels,
+          datasets: [{
+            label: `Sales ${currentYear} (₹)`,
+            data: yearlyData,
+            backgroundColor: '#3498db',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: `Year Total: ₹${yearlyData.reduce((a, b) => a + b, 0).toLocaleString()}`
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `₹${ctx.raw.toLocaleString()}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: value => `₹${value.toLocaleString()}`
+              }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error("Failed to load reports charts:", error);
+  }
 }
 
 // =============================
@@ -679,8 +1362,8 @@ document.getElementById("addSalesForm")?.addEventListener("submit", e => {
       // reset auto fields
       document.getElementById("totalAmount").value = "";
       document.getElementById("soldBy").value = loggedInEmployee;
+      document.getElementById("saleDate").value = new Date().toISOString().split("T")[0];
 
-      showSection("viewSales");
       loadSalesTable();
       refreshKPIsOnly();
     })
@@ -747,7 +1430,7 @@ const materialItems = {
   "🍬 Sweeteners": ["White sugar", "Brown sugar", "Powdered sugar (Icing sugar)", "Jaggery powder", "Glucose syrup"],
   "🧈 Fats & Dairy": ["Butter", "Margarine", "Vegetable oil", "Milk", "Fresh cream", "Whipping cream", "Condensed milk", "Cheese"],
   "🧪 Leavening & Baking Agents": ["Baking powder", "Baking soda", "Yeast (Instant or Dry)", "Cake improver", "Bread improver"],
-  "🍫 Flavours & Enhancers": ["Vanilla essence", "Cocoa powder", "Chocolate chips", "Coffee powder", "Custard powder"],
+  "🍫 Flavours & Enhancers": ["Vanilla essence", "Cocoa powder", "Chocolate chips", "Coffee powder", "Custard powder", "Baking Chocolate"],
   "🌰 Nuts & Dry Fruits": ["Cashews", "Almonds", "Raisins", "Pistachios", "Walnuts"],
   "🧂 Savory Basics & Seasoning": ["Salt", "Black pepper", "Oregano", "Chili flakes", "Mixed herbs"],
   "🎨 Additives & Decorations": ["Food color", "Sprinklers", "Veg gelatin", "Baking chocolate", "Compound chocolate"]
@@ -801,21 +1484,56 @@ document.getElementById("invMaterialType")?.addEventListener("change", function 
 });
 
 // ================= DYNAMIC SALES DROPDOWN =================
-document.getElementById("itemType")?.addEventListener("change", function () {
+// ================= DYNAMIC SALES DROPDOWN (VALIDATED AGAINST TODAY'S PRODUCTION) =================
+document.getElementById("itemType")?.addEventListener("change", async function () {
   const type = this.value;
   const productSelect = document.getElementById("productName");
-  productSelect.innerHTML = '<option value="">Select Item</option>';
+  productSelect.innerHTML = '<option value="">Loading...</option>';
+  productSelect.disabled = true;
 
-  if (type && salesItems[type]) {
+  if (!type || !salesItems[type]) {
+    productSelect.innerHTML = '<option value="">Select Item</option>';
+    return;
+  }
+
+  try {
+    // Fetch actual Inventory stock levels
+    const res = await fetch("http://127.0.0.1:3000/inventory", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const inventory = await res.json();
+
+    // 2. Populate Dropdown
+    productSelect.innerHTML = '<option value="">Select Item</option>';
+
     salesItems[type].forEach(item => {
+      // Find the item in current inventory
+      const invItem = inventory.find(i => i.product.toLowerCase().trim() === item.toLowerCase().trim());
+      const availableQty = invItem ? Number(invItem.stock) : 0;
+
       const opt = document.createElement("option");
       opt.value = item;
-      opt.textContent = item;
+
+      if (availableQty > 0) {
+        // Available
+        opt.textContent = `${item} (Stock: ${availableQty})`;
+        opt.style.color = "#27ae60"; // Green
+        opt.style.fontWeight = "bold";
+      } else {
+        // Unavailable
+        opt.textContent = `${item} (Out of Stock)`;
+        opt.style.color = "#999";
+        opt.disabled = true;
+      }
+
       productSelect.appendChild(opt);
     });
+
     productSelect.disabled = false;
-  } else {
-    productSelect.disabled = true;
+
+  } catch (err) {
+    console.error("Failed to validate stock", err);
+    productSelect.innerHTML = '<option value="">Error loading stock</option>';
   }
 });
 
@@ -869,8 +1587,8 @@ function formatDate(dateValue) {
   const d = new Date(dateValue);
   if (isNaN(d.getTime())) return "—";
 
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
     month: "short",
     year: "numeric"
   });
@@ -976,8 +1694,30 @@ async function refreshKPIsOnly() {
       buildProfitLossBarChart(sales);
       buildMonthlyProfitChart(sales);
     }
+
+    // Always check for low stock on refresh (if not employee)
+    if (currentUserRole !== "Employee") {
+      checkLowStock();
+    }
   } catch (err) {
     console.error("Dashboard refresh failed:", err);
+  }
+}
+
+async function checkLowStock() {
+  try {
+    const res = await fetch("http://127.0.0.1:3000/dashboard", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.lowStockItems && (currentUserRole === "Owner" || currentUserRole === "Accountant")) {
+      showLowStockAlert(data.lowStockItems);
+    } else {
+      const existingAlert = document.getElementById("globalLowStockAlert");
+      if (existingAlert) existingAlert.remove();
+    }
+  } catch (err) {
+    console.error("Failed to check low stock:", err);
   }
 }
 
@@ -1032,6 +1772,7 @@ function switchInventoryView(view) {
 
   // Update Buttons
   document.getElementById("btnShowApprovals")?.classList.toggle("active", view === 'approvals');
+  document.getElementById("btnShowToday")?.classList.toggle("active", view === 'today');
   document.getElementById("btnShowHistory")?.classList.toggle("active", view === 'history');
 
   // Show/Hide Date Filter
@@ -1041,9 +1782,65 @@ function switchInventoryView(view) {
   // Load Content
   if (view === 'approvals') {
     loadInventoryApprovals();
+  } else if (view === 'today') {
+    loadTodaysApprovedProduction();
   } else {
     loadInventoryHistory();
   }
+}
+
+
+function loadTodaysApprovedProduction() {
+  const tbody = document.getElementById("productionApprovalTable");
+  const thead = tbody?.parentElement.querySelector("thead");
+  if (!tbody || !thead) return;
+
+  thead.innerHTML = `
+    <tr>
+      <th>Product</th>
+      <th>Produced Qty</th>
+      <th>Produced By</th>
+      <th>Time</th>
+      <th>Status</th>
+    </tr>
+  `;
+
+  tbody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Loading today's production...</td></tr>";
+
+  fetch("http://127.0.0.1:3000/production/history", {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+    .then(res => res.json())
+    .then(batches => {
+      const today = new Date().toLocaleDateString();
+      // Filter: Today AND Approved
+      const dailyApproved = batches.filter(b =>
+        new Date(b.production_date).toLocaleDateString() === today &&
+        b.status === "Approved"
+      );
+
+      if (dailyApproved.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center'>No approved production for today.</td></tr>";
+        return;
+      }
+
+      tbody.innerHTML = "";
+      dailyApproved.forEach(b => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td style="font-weight:bold; color:var(--bakery-accent);">${b.product}</td>
+          <td>${b.quantity}</td>
+          <td>${b.producedBy}</td>
+          <td>${new Date(b.production_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td><span class="success">Ready for Sale</span></td>
+        `;
+        tbody.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; color:red;'>Error loading data</td></tr>";
+    });
 }
 
 function loadInventory() {
@@ -1100,7 +1897,7 @@ function loadInventoryApprovals() {
           <td>${b.product}</td>
           <td>${b.quantity}</td>
           <td>${b.producedBy}</td>
-          <td>${new Date(b.production_date).toLocaleDateString()}</td>
+          <td>${formatDate(b.production_date)}</td>
           <td><span class="pending">Pending Approval</span></td>
           <td>
             <button class="btn-xs success" onclick="updateProductionStatus('${b.batchId}', 'Approved')">Approve</button>
@@ -1164,9 +1961,9 @@ function loadInventoryHistory() {
           <td>${b.product}</td>
           <td>${b.quantity}</td>
           <td>${b.producedBy}</td>
-          <td>${new Date(b.production_date).toLocaleDateString()}</td>
+          <td>${formatDate(b.production_date)}</td>
           <td>${statusBadge}</td>
-           <td>${new Date(b.expiry_date).toLocaleDateString()}</td>
+           <td>${formatDate(b.expiry_date)}</td>
         `;
         tbody.appendChild(row);
       });
@@ -1194,6 +1991,7 @@ function updateProductionStatus(batchId, status) {
       if (data.message.includes("Insufficient stock")) {
         alert("Error: " + data.message);
       } else {
+        showSection("inventory"); // Force stay on inventory
         loadInventory();
         refreshKPIsOnly(); // Update all dashboard metrics
       }
@@ -1232,8 +2030,39 @@ async function loadMyProductionHistory() {
 
   tbody.innerHTML = "";
 
-  data.forEach(batch => {
-    const canEdit = batch.status === "PENDING_APPROVAL";
+  // Get today's date in local time YYYY-MM-DD
+  const today = new Date().toLocaleDateString('en-CA');
+
+  // Filter for today only and sort
+  const filteredData = data.filter(batch => {
+    const batchDate = new Date(batch.production_date).toLocaleDateString('en-CA');
+    return batchDate === today;
+  });
+
+  // Sort descending (latest on top)
+  // Since backend already sorts by date, we just need to ensure we don't reverse it incorrectly
+  // and maintain a secondary sort by batchId if dates are identical
+  filteredData.sort((a, b) => {
+    const dateB = new Date(b.production_date);
+    const dateA = new Date(a.production_date);
+    if (dateB - dateA !== 0) return dateB - dateA;
+    return b.batchId.localeCompare(a.batchId);
+  });
+
+  if (filteredData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #777;">No production entries for today</td></tr>`;
+    return;
+  }
+
+  filteredData.forEach(batch => {
+    // Map backend status to CSS classes
+    let statusClass = "pending";
+    if (batch.status === "Approved") statusClass = "approved";
+    if (batch.status === "Rejected") statusClass = "rejected";
+    if (batch.status === "Pending") statusClass = "pending_approval";
+
+    const statusBadge = `<span class="status-badge ${statusClass}">${batch.status}</span>`;
+    const isDisabled = (batch.status === 'Approved' || batch.status === 'Rejected') ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
 
     tbody.innerHTML += `
       <tr>
@@ -1241,12 +2070,10 @@ async function loadMyProductionHistory() {
         <td>${batch.product}</td>
         <td>${batch.quantity}</td>
         <td>${formatDate(batch.production_date)}</td>
-        <td><span class="status-badge ${batch.status.toLowerCase()}">${batch.status}</span></td>
+        <td>${statusBadge}</td>
         <td>${formatDate(batch.expiry_date)}</td>
         <td>
-          ${canEdit
-        ? `<button onclick="openEditModal('${batch.batchId}', ${batch.quantity}, '${batch.notes || ""}')">Edit</button>`
-        : "-"}
+          <button class="btn-xs edit" onclick="openEditModal('${batch.batchId}', ${batch.quantity}, '${(batch.notes || "").replace(/'/g, "\\'")}')" ${isDisabled}>Edit</button>
         </td>
       </tr>
     `;
@@ -1270,21 +2097,28 @@ showBtn.addEventListener("click", () => {
 
 // ===============ALERT BOX=============//
 function showLowStockAlert(items) {
-  let alertBox = document.getElementById("lowStockAlert");
+  let alertBox = document.getElementById("globalLowStockAlert");
+
+  if (!items || items.length === 0) {
+    if (alertBox) alertBox.remove();
+    return;
+  }
 
   if (!alertBox) {
     alertBox = document.createElement("div");
-    alertBox.id = "lowStockAlert";
+    alertBox.id = "globalLowStockAlert";
     alertBox.className = "low-stock-alert";
-    const dashboardSection = document.getElementById("dashboard");
-    if (dashboardSection) {
-      dashboardSection.prepend(alertBox);
-    }
+  }
+
+  // Always prepend to the currently active section
+  const activeSection = document.querySelector(".page-section.active");
+  if (activeSection && alertBox.parentElement !== activeSection) {
+    activeSection.prepend(alertBox);
   }
 
   alertBox.innerHTML = `
-    ⚠️ <strong>Low Stock Alert</strong><br>
-    ${items.map(i => `• ${i.product} (${i.stock} left)`).join("<br>")}
+    <strong>⚠️ Low Stock Alert</strong><br>
+    ${items.map(i => `• ${i.product}: Only ${i.stock} ${i.unit || ''} remaining (Minimum: ${i.minStock})`).join("<br>")}
   `;
 }
 
@@ -1491,11 +2325,8 @@ document.getElementById("expenseCategory")?.addEventListener("change", function 
     if (dynamicRow) {
       const config = {
         "💰 Salary": { label: "Staff Name", placeholder: "John Doe" },
-        "⚡ Utilities": { label: "Bill/Ref #", placeholder: "#INV-123" },
         "🏠 Rent": { label: "Month/Period", placeholder: "Jan 2026" },
-        "🚚 Transport": { label: "Vehicle/Trip", placeholder: "DL-01-X" },
-        "🔧 Maintenance": { label: "Service Details", placeholder: "Repair" },
-        "📦 Packaging": { label: "Vendor", placeholder: "PackCo" }
+        "🔧 Maintenance": { label: "Service Details", placeholder: "Repair" }
       };
 
       if (config[cat]) {
@@ -1555,7 +2386,7 @@ document.getElementById("expenseForm")?.addEventListener("submit", async functio
         if (!invRes.ok) throw new Error("Failed to update inventory stock");
         loadInventory();
       }
-      name = `Purchase: ${product} (${stock}${unit})`;
+      name = `Purchase: ${product} | Type: ${materialType} | Qty: ${stock}${unit} | Min: ${minStock}`;
       amount = costPrice;
     } catch (err) {
       msgEl.innerText = "❌ " + err.message;
@@ -1580,7 +2411,13 @@ document.getElementById("expenseForm")?.addEventListener("submit", async functio
     name,
     amount,
     date: document.getElementById("expenseDate").value,
-    paymentMethod: document.getElementById("expensePaymentMethod").value
+    paymentMethod: document.getElementById("expensePaymentMethod").value,
+    // Include specific fields for Raw Materials
+    materialType: category === "🌾 Raw Materials" ? document.getElementById("invMaterialType").value : null,
+    itemType: category === "🌾 Raw Materials" ? document.getElementById("invProduct").value : null,
+    qty: category === "🌾 Raw Materials" ? Number(document.getElementById("invStock").value) : null,
+    unit: category === "🌾 Raw Materials" ? document.getElementById("invUnit").value : null,
+    minStock: category === "🌾 Raw Materials" ? Number(document.getElementById("invMinStock").value) : null
   };
 
   const url = expenseId ? `http://127.0.0.1:3000/expenses/${expenseId}` : "http://127.0.0.1:3000/expenses/add";
@@ -1606,6 +2443,10 @@ document.getElementById("expenseForm")?.addEventListener("submit", async functio
         resetExpenseForm(true); // true means preserve the message
         loadExpensesTable();
         refreshKPIsOnly();
+
+        // Ensure form is visible for more entries
+        if (expenseFormDiv) expenseFormDiv.style.display = "block";
+        if (toggleExpenseBtn) toggleExpenseBtn.textContent = "❌ Cancel Entry";
       }, 1500);
     } else {
       msgEl.innerText = "❌ " + (data.message || "Failed to add expense");
@@ -1644,10 +2485,43 @@ function resetExpenseForm(preserveMsg = false) {
   const msgEl = document.getElementById("expenseMsg");
   if (!preserveMsg && msgEl) msgEl.innerText = "";
 
-  // Hide form
-  expenseFormDiv.style.display = "none";
-  toggleExpenseBtn.textContent = "➕ Add New Expense";
+  // Do NOT hide form here so user can add more items consecutively
+  // expenseFormDiv.style.display = "none";
+  // toggleExpenseBtn.textContent = "➕ Add New Expense";
 }
+
+// Helpers for parsing expense names
+const parseNameDetails = (fullName) => {
+  const match = fullName.match(/^(.*?) \((.*?)\)$/);
+  if (match) return { main: match[1], detail: match[2] };
+  return { main: fullName, detail: "" };
+};
+
+const parseRawMaterialDetails = (fullName) => {
+  if (!fullName) return { itemType: "-", materialType: "-", qty: "-", unit: "-", minStock: "-" };
+  const match = fullName.match(/Purchase:\s*(.*?)\s*\|\s*Type:\s*(.*?)\s*\|\s*Qty:\s*((\d+)(.*?))\s*\|\s*Min:\s*(.*)$/);
+  if (match) {
+    return {
+      itemType: match[1],
+      materialType: match[2],
+      qty: match[4],
+      unit: match[5],
+      minStock: match[6]
+    };
+  }
+  const legacyMatch = fullName.match(/Purchase:\s*(.*?)\s*\(((\d+)(.*?))\)$/);
+  if (legacyMatch) {
+    return {
+      itemType: legacyMatch[1],
+      materialType: "-",
+      qty: legacyMatch[3],
+      unit: legacyMatch[4],
+      minStock: "-"
+    };
+  }
+  const clean = fullName.replace("Purchase: ", "");
+  return { itemType: clean || "-", materialType: "-", qty: "-", unit: "-", minStock: "-" };
+};
 
 async function loadExpensesTable() {
   const tbody = document.getElementById("expensesTableBody");
@@ -1656,82 +2530,116 @@ async function loadExpensesTable() {
 
   const categoryFilter = document.getElementById("expenseFilterCategory")?.value || "";
 
+
+  // Define dynamic labels for categories
+  const dynamicLabels = {
+    "💰 Salary": "Staff Name",
+    "🏠 Rent": "Month/Period",
+    "🔧 Maintenance": "Service Details",
+    "🌾 Raw Materials": "Quantity/Detail"
+  };
+
   if (categoryFilter === "🌾 Raw Materials") {
-    // SWITCH TO INVENTORY VIEW
+    // Particular category chosen -> Show VERY detailed headers for Raw Materials
     tableHead.innerHTML = `
       <tr>
-        <th>Type</th>
-        <th>Raw Material</th>
-        <th>Stock</th>
-        <th>Unit</th>
-        <th>Min Level</th>
-        <th>Unit Price</th>
-        <th>Cost Price</th>
-        <th>Status</th>
-        <th>Action</th>
+        <th style="font-size:11px;">Material Type</th>
+        <th style="font-size:11px;">Item Type</th>
+        <th style="font-size:11px;">Qty</th>
+        <th style="font-size:11px;">Unit</th>
+        <th style="font-size:11px;">Min Stock</th>
+        <th style="font-size:11px;">Stock Status</th>
+        <th style="font-size:11px;">Total Amount</th>
+        <th style="font-size:11px;">Payment</th>
+        <th style="font-size:11px;">Paid By</th>
+        <th style="font-size:11px;">Date</th>
+        <th style="font-size:11px;">Action</th>
       </tr>
     `;
 
     try {
-      const res = await fetch("http://127.0.0.1:3000/inventory", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const items = await res.json();
+      const [expRes, invRes] = await Promise.all([
+        fetch(`http://127.0.0.1:3000/expenses?category=${encodeURIComponent(categoryFilter)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`http://127.0.0.1:3000/inventory`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      const expenses = await expRes.json();
+      const inventory = await invRes.json();
       tbody.innerHTML = "";
 
-      if (!Array.isArray(items) || items.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>No inventory items found.</td></tr>";
+      if (!Array.isArray(expenses) || expenses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan='11' style='text-align:center;'>No raw material purchases found.</td></tr>`;
         return;
       }
 
-      items.forEach(i => {
-        let statusText = "In Stock";
-        let statusClass = "status-ok";
-        if (i.stock === 0) {
-          statusText = "Out of Stock";
-          statusClass = "status-out";
-        } else if (i.stock <= i.minStock) {
-          statusText = "Low Stock";
-          statusClass = "status-low";
-        }
+      [...expenses].reverse().forEach(exp => {
+        // Prefer explicit fields if available (New Schema), else parse name (Old Schema)
+        const details = parseRawMaterialDetails(exp.name);
 
-        const unitPriceNum = i.unitPrice || (i.stock > 0 ? (i.costPrice / i.stock) : 0);
+        const materialType = exp.materialType || details.materialType;
+        const itemType = exp.itemType || details.itemType;
+        const qty = exp.qty || details.qty;
+        const unit = exp.unit || details.unit;
+        // Fix: Properly handle 0 or missing minStock to avoid 'undefined'
+        const minStock = (exp.minStock !== undefined && exp.minStock !== null) ? exp.minStock : details.minStock;
+
+        const invItem = inventory.find(i => i.product.toLowerCase().trim() === itemType.toLowerCase().trim());
+        let stockStatus = '<span class="status-out" style="font-size:10px;">Unknown</span>';
+        if (invItem) {
+          if (invItem.stock <= 0) {
+            stockStatus = '<span class="status-out" style="padding:2px 8px; font-size:10px; border-radius:10px; font-weight:600;">Out of Stock</span>';
+          } else if (invItem.stock <= invItem.minStock) {
+            stockStatus = '<span class="pending" style="padding:2px 8px; font-size:10px; border-radius:10px; font-weight:600;">Low Stock</span>';
+          } else {
+            stockStatus = '<span class="success" style="padding:2px 8px; font-size:10px; border-radius:10px; font-weight:600;">In Stock</span>';
+          }
+        }
 
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${i.materialType || "-"}</td>
-          <td style="text-transform: capitalize;">${i.product}</td>
-          <td>${i.stock}</td>
-          <td>${i.unit || "-"}</td>
-          <td>${i.minStock ?? "-"}</td>
-          <td>₹${Number(unitPriceNum).toFixed(2)}</td>
-          <td>₹${Number(i.costPrice || 0).toFixed(2)}</td>
-          <td><span class="${statusClass}">${statusText}</span></td>
+          <td style="font-size:12px;">${materialType}</td>
+          <td style="font-size:12px; font-weight:600;">${itemType}</td>
+          <td style="font-size:12px;">${qty}</td>
+          <td style="font-size:12px;">${unit}</td>
+          <td style="font-size:12px;">${minStock}</td>
+          <td style="font-size:12px;">${stockStatus}</td>
+          <td style="font-size:12px;">₹${Number(exp.amount).toFixed(2)}</td>
+          <td style="font-size:12px;">${exp.paymentMethod}</td>
+          <td style="font-size:12px;"><span class="role-badge" style="padding:2px 6px; font-size:10px;">${exp.paidBy}</span></td>
+          <td style="font-size:12px;">${formatDate(exp.date)}</td>
           <td>
-            <button class="btn-xs edit" onclick='openEditInventory(${JSON.stringify(i)})'>Edit</button>
-            <button class="btn-xs delete" onclick="openDeleteInventory(${i.id})">Del</button>
+            <div style="display:flex; gap:2px;">
+              <button class="btn-xs edit" style="padding:4px 6px;" onclick="editExpense('${JSON.stringify(exp).replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">✏️</button>
+              <button class="btn-xs delete" style="padding:4px 6px;" onclick="deleteExpense(${exp.id})">🗑</button>
+              <button class="btn-xs download" style="padding:4px 6px;" onclick="downloadExpenseInvoice(${exp.id})">📄</button>
+            </div>
           </td>
         `;
         tbody.appendChild(row);
       });
     } catch (err) {
-      console.error("Failed to load inventory:", err);
+      console.error("Failed to load raw material expenses:", err);
     }
-  } else {
-    // SWITCH TO EXPENSE VIEW
+  } else if (categoryFilter && categoryFilter !== "") {
+    // Particular category chosen -> Show detailed headers
+    const detailLabel = dynamicLabels[categoryFilter];
+    const hasDetailCol = !!detailLabel;
+
     tableHead.innerHTML = `
       <tr>
         <th>Category</th>
-        <th>Expense Name</th>
+        ${hasDetailCol ? `<th>${detailLabel}</th>` : ""}
+        <th>Description</th>
         <th>Amount</th>
-        <th>Method</th>
-        <th>Paid By</th>
         <th>Date</th>
         <th>Action</th>
       </tr>
     `;
 
-    const queryStr = categoryFilter ? `?category=${encodeURIComponent(categoryFilter)}` : "";
+    const queryStr = `?category=${encodeURIComponent(categoryFilter)}`;
     try {
       const res = await fetch(`http://127.0.0.1:3000/expenses${queryStr}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -1740,21 +2648,27 @@ async function loadExpensesTable() {
       tbody.innerHTML = "";
 
       if (!Array.isArray(expenses) || expenses.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>No expenses found.</td></tr>";
+        tbody.innerHTML = `<tr><td colspan='5' style='text-align:center;'>No expenses found for ${categoryFilter}.</td></tr>`;
         return;
       }
 
       [...expenses].reverse().forEach(exp => {
+        const { main, detail } = parseNameDetails(exp.name);
+
+        // Strip "Purchase: " prefix for cleaner look in Raw Materials (though this block is not for Raw Materials)
+        // if (categoryFilter === "🌾 Raw Materials") {
+        //   displayMain = main.replace("Purchase: ", "");
+        // }
+
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>${exp.category}</td>
-          <td>${exp.name}</td>
+          ${hasDetailCol ? `<td style="font-weight:600; color:var(--bakery-accent);">${detail || "-"}</td>` : ""}
+          <td>${main}</td>
           <td>₹${Number(exp.amount).toFixed(2)}</td>
-          <td>${exp.paymentMethod}</td>
-          <td>${exp.paidBy}</td>
           <td>${formatDate(exp.date)}</td>
           <td>
-            <button class="btn-xs edit" onclick='editExpense(${JSON.stringify(exp)})'>Edit</button>
+            <button class="btn-xs edit" onclick="editExpense('${JSON.stringify(exp).replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">Edit</button>
             <button class="btn-xs delete" onclick="deleteExpense(${exp.id})">Del</button>
             <button class="btn-xs download" onclick="downloadExpenseInvoice(${exp.id})">Invoice</button>
           </td>
@@ -1762,14 +2676,77 @@ async function loadExpensesTable() {
         tbody.appendChild(row);
       });
     } catch (err) {
-      console.error("Failed to load expenses:", err);
+      console.error("Failed to load filtered expenses:", err);
+    }
+  } else {
+    // Overall view -> Main common headers only
+    tableHead.innerHTML = `
+      <tr>
+        <th>Category</th>
+        <th>Expense Name</th>
+        <th>Amount</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    try {
+      const res = await fetch(`http://127.0.0.1:3000/expenses`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const expenses = await res.json();
+      tbody.innerHTML = "";
+
+      if (!Array.isArray(expenses) || expenses.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No expenses found.</td></tr>";
+        return;
+      }
+
+      [...expenses].reverse().forEach(exp => {
+        let cleanName = exp.name;
+
+        if (exp.category === "🌾 Raw Materials") {
+          // Extract just the item type to avoid long messy string in general view
+          const details = parseRawMaterialDetails(exp.name);
+          cleanName = `Purchase: ${details.itemType}`;
+        } else {
+          // For other categories, use parseNameDetails to remove the bracketed details
+          const { main } = parseNameDetails(exp.name);
+          cleanName = main;
+        }
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${exp.category}</td>
+          <td>${cleanName}</td>
+          <td>₹${Number(exp.amount).toFixed(2)}</td>
+          <td>${formatDate(exp.date)}</td>
+          <td>
+            <button class="btn-xs edit" onclick="editExpense('${JSON.stringify(exp).replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">Edit</button>
+            <button class="btn-xs delete" onclick="deleteExpense(${exp.id})">Del</button>
+            <button class="btn-xs download" onclick="downloadExpenseInvoice(${exp.id})">Invoice</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error("Failed to load overall expenses:", err);
     }
   }
 }
 
 document.getElementById("expenseFilterCategory")?.addEventListener("change", loadExpensesTable);
 
-window.editExpense = function (exp) {
+window.editExpense = function (expInput) {
+  let exp = expInput;
+  if (typeof expInput === "string") {
+    try {
+      exp = JSON.parse(expInput);
+    } catch (e) {
+      console.error("Failed to parse expense JSON:", e);
+      return;
+    }
+  }
   document.getElementById("expenseId").value = exp.id;
   document.getElementById("expenseCategory").value = exp.category;
 
@@ -1778,10 +2755,30 @@ window.editExpense = function (exp) {
   document.getElementById("expenseCategory").dispatchEvent(catEvent);
 
   if (exp.category === "🌾 Raw Materials") {
-    // Extract product name and qty from expense name if needed, 
-    // but we usually want the user to pick from inventory selectors.
-    // For now we just focus the inventory fields
-    document.getElementById("invMaterialType").focus();
+    const details = parseRawMaterialDetails(exp.name);
+
+    // Set inventory fields
+    const matTypeInput = document.getElementById("invMaterialType");
+    if (matTypeInput) matTypeInput.value = details.materialType !== "-" ? details.materialType : "";
+
+    // Trigger material type change to populate items
+    const matEvent = new Event('change');
+    matTypeInput?.dispatchEvent(matEvent);
+
+    // Set product (need small delay for dropdown to populate)
+    setTimeout(() => {
+      const prodInput = document.getElementById("invProduct");
+      if (prodInput) prodInput.value = details.itemType;
+
+      document.getElementById("invStock").value = details.qty !== "-" ? details.qty : "";
+      document.getElementById("invUnit").value = details.unit !== "-" ? details.unit : "kg";
+      document.getElementById("invMinStock").value = details.minStock !== "-" ? details.minStock : "";
+      document.getElementById("invUnitPrice").value = (exp.amount / (Number(details.qty) || 1)).toFixed(2);
+
+      // Calculate total cost display
+      const costInput = document.getElementById("invCost");
+      if (costInput) costInput.value = Number(exp.amount).toFixed(2);
+    }, 100);
   } else {
     document.getElementById("expenseName").value = exp.name;
     document.getElementById("expenseAmount").value = exp.amount;
@@ -1836,46 +2833,3 @@ function downloadInvoice(saleId) {
 // =============================
 document.addEventListener("DOMContentLoaded", loadDashboard);
 
-// ================= OVERRIDE EMPLOYEE PRODUCTION HISTORY =================
-window.loadMyProductionHistory = function () {
-  const tbody = document.querySelector("#productionHistoryTable tbody");
-  if (!tbody) return;
-
-  fetch("http://127.0.0.1:3000/production/my-history", {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-    .then(res => res.json())
-    .then(batches => {
-      tbody.innerHTML = "";
-
-      if (batches.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center'>No production history found.</td></tr>";
-        return;
-      }
-
-      batches.reverse().forEach(b => {
-        const row = document.createElement("tr");
-
-        let statusBadge = `<span class="pending">Pending</span>`;
-        if (b.status === "Approved") statusBadge = `<span class="success">Approved</span>`;
-        if (b.status === "Rejected") statusBadge = `<span class="status-out">Rejected</span>`;
-
-        // Disable Edit if Approved
-        const isDisabled = (b.status === 'Approved' || b.status === 'Rejected') ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
-
-        row.innerHTML = `
-                <td>${b.batchId}</td>
-                <td>${b.product}</td>
-                <td>${b.quantity}</td>
-                <td>${new Date(b.production_date).toLocaleDateString()}</td>
-                <td>${statusBadge}</td>
-                <td>${new Date(b.expiry_date).toLocaleDateString()}</td>
-                <td>
-                    <button class="btn-xs edit" onclick="openEditModal('${b.batchId}', ${b.quantity}, '${b.notes}')" ${isDisabled}>Edit</button>
-                </td>
-            `;
-        tbody.appendChild(row);
-      });
-    })
-    .catch(err => console.error(err));
-};

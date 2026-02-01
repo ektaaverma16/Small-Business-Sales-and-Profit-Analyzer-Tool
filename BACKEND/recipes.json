@@ -16,35 +16,8 @@
       "White sugar": 0.35,
       "Butter": 0.2,
       "Cocoa powder": 0.05,
-      "Milk": 0.2
-    }
-  },
-  {
-    "product": "White Bread",
-    "materials": {
-      "All-purpose flour (Maida)": 0.6,
-      "Yeast (Instant or Dry)": 0.01,
-      "Salt": 0.01,
-      "Butter": 0.03,
-      "Milk": 0.1
-    }
-  },
-  {
-    "product": "Butter Cookies",
-    "materials": {
-      "All-purpose flour (Maida)": 0.5,
-      "White sugar": 0.25,
-      "Butter": 0.3,
-      "Vanilla essence": 0.005
-    }
-  },
-  {
-    "product": "Veg Puff",
-    "materials": {
-      "All-purpose flour (Maida)": 0.3,
-      "Vegetable oil": 0.1,
-      "Salt": 0.005,
-      "Mixed herbs": 0.002
+      "Milk": 0.2,
+      "Baking powder": 0.01
     }
   },
   {
@@ -54,7 +27,156 @@
       "White sugar": 0.3,
       "Butter": 0.2,
       "Vanilla essence": 0.01,
-      "Milk": 0.2
+      "Milk": 0.2,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Black Forest Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.4,
+      "White sugar": 0.3,
+      "Butter": 0.15,
+      "Cocoa powder": 0.05,
+      "Whipping cream": 0.3,
+      "Baking chocolate": 0.1,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Pineapple Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.3,
+      "Butter": 0.2,
+      "Whipping cream": 0.25,
+      "Vanilla essence": 0.01,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Red Velvet Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.35,
+      "Butter": 0.2,
+      "Cocoa powder": 0.02,
+      "Food color": 0.005,
+      "Fresh cream": 0.2,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Fruit Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.25,
+      "Butter": 0.2,
+      "Raisins": 0.05,
+      "Cashews": 0.03,
+      "Almonds": 0.02,
+      "Milk": 0.15,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Coffee Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.3,
+      "Butter": 0.2,
+      "Coffee powder": 0.02,
+      "Milk": 0.2,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Marble Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.3,
+      "Butter": 0.2,
+      "Cocoa powder": 0.03,
+      "Milk": 0.2,
+      "Baking powder": 0.01
+    }
+  },
+  {
+    "product": "Eggless Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.3,
+      "Condensed milk": 0.2,
+      "Butter": 0.15,
+      "Baking powder": 0.015,
+      "Baking soda": 0.005
+    }
+  },
+  {
+    "product": "Chocolate Pastry",
+    "materials": {
+      "All-purpose flour (Maida)": 0.05,
+      "White sugar": 0.03,
+      "Whipping cream": 0.04,
+      "Cocoa powder": 0.01,
+      "Baking chocolate": 0.01
+    }
+  },
+  {
+    "product": "Vanilla Pastry",
+    "materials": {
+      "All-purpose flour (Maida)": 0.05,
+      "White sugar": 0.03,
+      "Whipping cream": 0.04,
+      "Vanilla essence": 0.002
+    }
+  },
+  {
+    "product": "Pineapple Pastry",
+    "materials": {
+      "All-purpose flour (Maida)": 0.05,
+      "White sugar": 0.03,
+      "Whipping cream": 0.04,
+      "Vanilla essence": 0.001
+    }
+  },
+  {
+    "product": "Strawberry Pastry",
+    "materials": {
+      "All-purpose flour (Maida)": 0.05,
+      "White sugar": 0.03,
+      "Whipping cream": 0.04,
+      "Food color": 0.001
+    }
+  },
+  {
+    "product": "Cupcake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.04,
+      "White sugar": 0.03,
+      "Butter": 0.02,
+      "Milk": 0.02,
+      "Baking powder": 0.001
+    }
+  },
+  {
+    "product": "Chocolate Cupcake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.04,
+      "White sugar": 0.03,
+      "Butter": 0.02,
+      "Cocoa powder": 0.005,
+      "Milk": 0.02,
+      "Baking powder": 0.001
+    }
+  },
+  {
+    "product": "Choco Lava Cake",
+    "materials": {
+      "All-purpose flour (Maida)": 0.05,
+      "Butter": 0.04,
+      "Baking chocolate": 0.05,
+      "White sugar": 0.03
     }
   },
   {
@@ -68,6 +190,80 @@
     }
   },
   {
+    "product": "Swiss Roll",
+    "materials": {
+      "All-purpose flour (Maida)": 0.1,
+      "White sugar": 0.08,
+      "Whipping cream": 0.1,
+      "Butter": 0.03
+    }
+  },
+  {
+    "product": "Chocolate Mousse",
+    "materials": {
+      "Whipping cream": 0.15,
+      "Baking chocolate": 0.05,
+      "White sugar": 0.02
+    }
+  },
+  {
+    "product": "Mango Mousse",
+    "materials": {
+      "Whipping cream": 0.15,
+      "White sugar": 0.03,
+      "Food color": 0.001
+    }
+  },
+  {
+    "product": "White Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.6,
+      "Yeast (Instant or Dry)": 0.01,
+      "Salt": 0.01,
+      "Butter": 0.03,
+      "Milk": 0.1
+    }
+  },
+  {
+    "product": "Brown Bread",
+    "materials": {
+      "Whole wheat flour": 0.6,
+      "Yeast (Instant or Dry)": 0.01,
+      "Salt": 0.01,
+      "Jaggery powder": 0.02,
+      "Vegetable oil": 0.03
+    }
+  },
+  {
+    "product": "Whole Wheat Bread",
+    "materials": {
+      "Whole wheat flour": 0.7,
+      "Yeast (Instant or Dry)": 0.01,
+      "Salt": 0.01
+    }
+  },
+  {
+    "product": "Multigrain Bread",
+    "materials": {
+      "Whole wheat flour": 0.5,
+      "Bread flour": 0.2,
+      "Yeast (Instant or Dry)": 0.01,
+      "Salt": 0.01,
+      "Cashews": 0.02,
+      "Almonds": 0.02
+    }
+  },
+  {
+    "product": "Milk Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "Milk": 0.3,
+      "White sugar": 0.05,
+      "Yeast (Instant or Dry)": 0.015,
+      "Butter": 0.05
+    }
+  },
+  {
     "product": "Pav Bread",
     "materials": {
       "All-purpose flour (Maida)": 0.5,
@@ -77,12 +273,138 @@
     }
   },
   {
-    "product": "Paneer Puff",
+    "product": "Sandwich Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.6,
+      "Yeast (Instant or Dry)": 0.01,
+      "Salt": 0.01,
+      "Vegetable oil": 0.03
+    }
+  },
+  {
+    "product": "Burger Buns",
+    "materials": {
+      "All-purpose flour (Maida)": 0.1,
+      "Yeast (Instant or Dry)": 0.002,
+      "White sugar": 0.01,
+      "Milk": 0.05,
+      "Butter": 0.01
+    }
+  },
+  {
+    "product": "Hot Dog Buns",
+    "materials": {
+      "All-purpose flour (Maida)": 0.1,
+      "Yeast (Instant or Dry)": 0.002,
+      "White sugar": 0.01,
+      "Milk": 0.05,
+      "Butter": 0.01
+    }
+  },
+  {
+    "product": "Garlic Bread",
+    "materials": {
+      "All-purpose flour (Maida)": 0.2,
+      "Yeast (Instant or Dry)": 0.005,
+      "Butter": 0.05,
+      "Mixed herbs": 0.005,
+      "Salt": 0.002
+    }
+  },
+  {
+    "product": "Veg Puff",
     "materials": {
       "All-purpose flour (Maida)": 0.3,
       "Vegetable oil": 0.1,
       "Salt": 0.005,
       "Mixed herbs": 0.002
+    }
+  },
+  {
+    "product": "Paneer Puff",
+    "materials": {
+      "All-purpose flour (Maida)": 0.3,
+      "Cheese": 0.05,
+      "Vegetable oil": 0.1,
+      "Salt": 0.005,
+      "Mixed herbs": 0.002
+    }
+  },
+  {
+    "product": "Cheese Puff",
+    "materials": {
+      "All-purpose flour (Maida)": 0.3,
+      "Cheese": 0.1,
+      "Vegetable oil": 0.1,
+      "Salt": 0.005
+    }
+  },
+  {
+    "product": "Veg Roll",
+    "materials": {
+      "All-purpose flour (Maida)": 0.1,
+      "Vegetable oil": 0.02,
+      "Salt": 0.002
+    }
+  },
+  {
+    "product": "Bread Roll",
+    "materials": {
+      "All-purpose flour (Maida)": 0.15,
+      "Yeast (Instant or Dry)": 0.003,
+      "Salt": 0.002
+    }
+  },
+  {
+    "product": "Veg Patty",
+    "materials": {
+      "All-purpose flour (Maida)": 0.2,
+      "Vegetable oil": 0.05,
+      "Salt": 0.002
+    }
+  },
+  {
+    "product": "Veg Samosa",
+    "materials": {
+      "All-purpose flour (Maida)": 0.1,
+      "Vegetable oil": 0.03,
+      "Salt": 0.002
+    }
+  },
+  {
+    "product": "Cheese Croissant",
+    "materials": {
+      "All-purpose flour (Maida)": 0.15,
+      "Butter": 0.1,
+      "Cheese": 0.05,
+      "Yeast (Instant or Dry)": 0.004
+    }
+  },
+  {
+    "product": "Veg Calzone",
+    "materials": {
+      "All-purpose flour (Maida)": 0.2,
+      "Yeast (Instant or Dry)": 0.004,
+      "Cheese": 0.05,
+      "Mixed herbs": 0.005
+    }
+  },
+  {
+    "product": "Stuffed Bun",
+    "materials": {
+      "All-purpose flour (Maida)": 0.1,
+      "Yeast (Instant or Dry)": 0.002,
+      "Butter": 0.01,
+      "Salt": 0.002
+    }
+  },
+  {
+    "product": "Butter Cookies",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "White sugar": 0.25,
+      "Butter": 0.3,
+      "Vanilla essence": 0.005
     }
   },
   {
@@ -96,13 +418,72 @@
     }
   },
   {
-    "product": "Milk Bread",
+    "product": "Oat Cookies",
+    "materials": {
+      "All-purpose flour (Maida)": 0.3,
+      "Butter": 0.2,
+      "Brown sugar": 0.2,
+      "Raisins": 0.05
+    }
+  },
+  {
+    "product": "Jeera Biscuits",
     "materials": {
       "All-purpose flour (Maida)": 0.5,
-      "Milk": 0.3,
-      "White sugar": 0.05,
-      "Yeast (Instant or Dry)": 0.015,
+      "Butter": 0.25,
+      "White sugar": 0.1,
+      "Salt": 0.01
+    }
+  },
+  {
+    "product": "Oatmeal Cookies",
+    "materials": {
+      "All-purpose flour (Maida)": 0.3,
+      "Butter": 0.2,
+      "Brown sugar": 0.2
+    }
+  },
+  {
+    "product": "Khari Biscuit",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "Margarine": 0.4,
+      "Salt": 0.01
+    }
+  },
+  {
+    "product": "Rusk Toast",
+    "materials": {
+      "All-purpose flour (Maida)": 0.6,
+      "Yeast (Instant or Dry)": 0.01,
+      "White sugar": 0.1,
       "Butter": 0.05
+    }
+  },
+  {
+    "product": "Coconut Cookies",
+    "materials": {
+      "All-purpose flour (Maida)": 0.4,
+      "Butter": 0.2,
+      "White sugar": 0.2
+    }
+  },
+  {
+    "product": "Sugar-free Biscuits",
+    "materials": {
+      "All-purpose flour (Maida)": 0.5,
+      "Butter": 0.25,
+      "Salt": 0.005
+    }
+  },
+  {
+    "product": "Digestive Biscuits",
+    "materials": {
+      "Whole wheat flour": 0.4,
+      "All-purpose flour (Maida)": 0.1,
+      "Butter": 0.2,
+      "Brown sugar": 0.1,
+      "Baking soda": 0.005
     }
   }
 ]

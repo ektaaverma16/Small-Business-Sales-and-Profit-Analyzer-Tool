@@ -227,9 +227,18 @@ function verifyRole(role) {
 
 
 app.get("/dashboard", verifyToken, (req, res) => {
+  const inventory = loadInventory();
+  const lowStockItems = inventory.filter(i =>
+    i.business === req.user.businessId &&
+    i.minStock !== undefined && i.minStock !== null &&
+    Number(i.stock) <= Number(i.minStock) &&
+    Number(i.minStock) > 0
+  );
+
   res.json({
     message: "Dashboard access granted ",
-    user: req.user
+    user: req.user,
+    lowStockItems: (req.user.role === "Owner" || req.user.role === "Accountant") ? lowStockItems : []
   });
 });
 
@@ -296,6 +305,18 @@ app.post("/sales/add", verifyToken, (req, res) => {
 
   sales.push(newSale);
   saveSales(sales);
+
+  // DEDUCT FROM INVENTORY
+  const inventory = loadInventory();
+  const finishedItem = inventory.find(i =>
+    i.product.toLowerCase().trim() === product.toLowerCase().trim() &&
+    i.business === req.user.businessId
+  );
+
+  if (finishedItem) {
+    finishedItem.stock = Math.max(0, Number(finishedItem.stock) - Number(quantity));
+    saveInventory(inventory);
+  }
 
   res.json({
     message: "Sale added successfully",
@@ -366,6 +387,18 @@ app.delete("/sales/:id", verifyToken, (req, res) => {
   sales.splice(saleIndex, 1);
   saveSales(sales);
 
+  // RESTORE INVENTORY
+  const inventory = loadInventory();
+  const finishedItem = inventory.find(i =>
+    i.product.toLowerCase().trim() === sale.product.toLowerCase().trim() &&
+    i.business === req.user.businessId
+  );
+
+  if (finishedItem) {
+    finishedItem.stock = Number(finishedItem.stock) + Number(sale.quantity);
+    saveInventory(inventory);
+  }
+
   console.log("Sale deleted:", sale);
   res.json({ message: "Sale deleted successfully" });
 });
@@ -390,13 +423,12 @@ app.post("/expenses/add", verifyToken, (req, res) => {
   }
 
   console.log("Adding expense:", req.body, "User:", req.user);
-  const { category, name, amount, date, paymentMethod } = req.body;
+  const { category, name, amount, date, paymentMethod, materialType, itemType, qty, unit, minStock } = req.body;
 
   if (!category || !name || amount === "" || amount === undefined || !date || !paymentMethod) {
     console.log("Validation failed:", { category, name, amount, date, paymentMethod });
     return res.status(400).json({ message: "Invalid expense data" });
   }
-
 
   const expenses = loadExpenses();
 
@@ -407,6 +439,11 @@ app.post("/expenses/add", verifyToken, (req, res) => {
     amount: Number(amount),
     date,
     paymentMethod,
+    materialType: materialType || null,
+    itemType: itemType || null,
+    qty: qty || null,
+    unit: unit || null,
+    minStock: minStock || null,
     paidBy: req.user.role,
     addedBy: req.user.username,
     business: req.user.businessId
@@ -480,36 +517,111 @@ app.delete("/expenses/:id", verifyToken, (req, res) => {
   res.json({ message: "Expense deleted successfully" });
 });
 
-app.get("/expenses/invoice/:id", verifyToken, (req, res) => {
-  const id = Number(req.params.id);
-  const expenses = loadExpenses();
-  const expense = expenses.find(e => e.id === id && e.business === req.user.businessId);
+app.get("/expenses/invoice/:id",
+  // Inject token from query for downloads
+  (req, res, next) => {
+    if (!req.headers.authorization && req.query.token) {
+      req.headers.authorization = `Bearer ${req.query.token}`;
+    }
+    next();
+  },
+  verifyToken,
+  (req, res) => {
+    const id = Number(req.params.id);
+    const expenses = loadExpenses();
+    const expense = expenses.find(e => e.id === id && e.business === req.user.businessId);
 
-  if (!expense) {
-    return res.status(404).json({ message: "Expense not found" });
-  }
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
 
-  const doc = new PDFDocument({ margin: 50 });
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename=expense-${id}.pdf`);
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=expense-${id}.pdf`);
 
-  doc.pipe(res);
-  doc.fontSize(20).text("EXPENSE VOUCHER", { align: "center" });
-  doc.moveDown();
-  doc.fontSize(12);
-  doc.text(`Voucher No: EXP-${expense.id}`);
-  doc.text(`Date: ${expense.date}`);
-  doc.text(`Category: ${expense.category}`);
-  doc.text(`Expense Name: ${expense.name}`);
-  doc.text(`Paid By: ${expense.paidBy}`);
-  doc.text(`Payment Method: ${expense.paymentMethod}`);
-  doc.moveDown();
-  doc.fontSize(14).text(`AMOUNT: ₹${expense.amount}`, { bold: true });
-  doc.moveDown(2);
-  doc.text("-----------------------", { align: "right" });
-  doc.text("Signature", { align: "right" });
-  doc.end();
-});
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(22).text("EXPENSE VOUCHER", { align: "center", underline: true });
+    doc.moveDown();
+
+    doc.fontSize(10);
+    doc.text(`Voucher No: EXP-${expense.id}`, { align: "right" });
+    doc.text(`Date: ${new Date(expense.date).toLocaleDateString("en-IN")}`, { align: "right" });
+    doc.moveDown();
+
+    doc.fontSize(12);
+    // Utility to clean strings for PDF (removes Emojis)
+    const pdfSafe = (text) => (text || "").toString().replace(/[^\x00-\x7F]/g, "").trim();
+
+    const catClean = pdfSafe(expense.category);
+    doc.text(`Category: ${catClean}`);
+    doc.moveDown(0.5);
+    doc.text("----------------------------------------------------------------", { color: "#cccccc" });
+    doc.moveDown(0.5);
+
+    if (expense.category.includes("Raw Materials")) {
+      const name = expense.name || "";
+      let item = name, type = "-", qty = "-", min = "-";
+
+      const detailedMatch = name.match(/Purchase:\s*(.*?)\s*\|\s*Type:\s*(.*?)\s*\|\s*Qty:\s*(.*?)\s*\|\s*Min:\s*(.*)$/);
+      const legacyMatch = name.match(/Purchase:\s*(.*?)\s*\((.*?)\)$/);
+
+      if (detailedMatch) {
+        item = pdfSafe(detailedMatch[1]);
+        type = pdfSafe(detailedMatch[2]);
+        qty = pdfSafe(detailedMatch[3]);
+        min = pdfSafe(detailedMatch[4]);
+      } else if (legacyMatch) {
+        item = pdfSafe(legacyMatch[1]);
+        qty = pdfSafe(legacyMatch[2]);
+      } else {
+        item = pdfSafe(name.replace("Purchase: ", ""));
+      }
+
+      doc.text(`Expense Name: ${item}`);
+      doc.text(`Material Type: ${type}`);
+      doc.text(`Quantity: ${qty}`);
+      doc.text(`Min Stock Level: ${min}`);
+    } else {
+      // General categories: "Description (Detail)"
+      const nameMatch = (expense.name || "").match(/^(.*?) \((.*?)\)$/);
+      const mainName = nameMatch ? nameMatch[1] : expense.name;
+      const detail = nameMatch ? nameMatch[2] : "";
+
+      const dynamicLabels = {
+        "💰 Salary": "Staff Name",
+        "🏠 Rent": "Month/Period",
+        "🔧 Maintenance": "Service Details"
+      };
+
+      const label = dynamicLabels[expense.category] || "Details";
+
+      doc.text(`Category: ${expense.category}`);
+      doc.text(`Expense Name: ${mainName}`);
+      if (detail) doc.text(`${label}: ${detail}`);
+    }
+
+    doc.moveDown(0.5);
+    doc.text(`Paid By: ${expense.paidBy}`);
+    doc.text(`Payment Mode: ${expense.paymentMethod}`);
+
+    doc.moveDown();
+    doc.text("----------------------------------------------------------------", { color: "#cccccc" });
+    doc.moveDown();
+
+    const amtStr = Number(expense.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+    doc.fontSize(14).text(`TOTAL AMOUNT: Rs. ${amtStr}`, { bold: true });
+
+    // Footer
+    doc.moveDown(5);
+    doc.fontSize(11);
+    const safeY = doc.y > 600 ? doc.y : 650;
+    doc.text("_______________________", 350, safeY);
+    doc.text("Authorized Signature", 370, safeY + 15);
+
+    doc.end();
+  });
 
 // ================= INVENTORY =================
 
@@ -827,7 +939,8 @@ app.get("/production/my-history", verifyToken, (req, res) => {
 });
 
 app.get("/production/history", verifyToken, (req, res) => {
-  if (!["Owner", "Manager", "Accountant"].includes(req.user.role)) {
+  // Allow Employees to see history for stock validation
+  if (!["Owner", "Manager", "Accountant", "Employee"].includes(req.user.role)) {
     return res.status(403).json({ message: "Access denied" });
   }
 
