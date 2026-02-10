@@ -9,22 +9,34 @@ if (!token) {
   throw new Error("No token");
 }
 
-const payload = JSON.parse(atob(token.split(".")[1]));
-const loggedInEmployee = payload.username;
-
-const saleDateInput = document.getElementById("saleDate");
-if (saleDateInput) {
-  saleDateInput.value = new Date().toISOString().split("T")[0];
+let payload;
+try {
+  payload = JSON.parse(atob(token.split(".")[1]));
+} catch (e) {
+  console.error("Invalid token format", e);
+  localStorage.removeItem("jwtToken");
+  window.location.href = "login.html";
 }
 
+if (!payload || !payload.username || !payload.role) {
+  alert("Invalid session data. Please login again.");
+  localStorage.removeItem("jwtToken");
+  window.location.href = "login.html";
+}
+
+const loggedInEmployee = payload.username;
 
 // TOP BAR
-document.getElementById("userName").innerText = payload.username;
+document.getElementById("userName").innerText = `Welcome, ${payload.username}`;
 document.getElementById("userRole").innerText = payload.role;
 
 // TOP BAR BUSINESS INFO
-document.getElementById("topBusinessType").innerText = payload.businessType;
-document.getElementById("topBusinessId").innerText = `ID: ${payload.businessId}`;
+if (document.getElementById("topBusinessType")) {
+  document.getElementById("topBusinessType").innerText = payload.businessType || "Business";
+}
+if (document.getElementById("topBusinessId")) {
+  document.getElementById("topBusinessId").innerText = `ID: ${payload.businessId || "N/A"}`;
+}
 
 
 
@@ -38,6 +50,9 @@ let editingBatchId = null;
 
 // Reports Chart Instances
 let reportChartInstances = {};
+
+// Cache for expenses to avoid JSON parsing issues in HTML attributes
+let currentExpenses = [];
 
 // ================= INVENTORY MODAL DOM REFS =================
 const editId = document.getElementById("editId");
@@ -347,6 +362,7 @@ async function loadSalesForDashboard() {
     // Charts only for Owner, Manager & Accountant
     if (currentUserRole !== "Employee") {
       buildDashboardCharts(sales, expenses);
+      loadReportsCharts(); // Populate the reports charts on the dashboard
     }
 
     if (currentUserRole !== "Employee") {
@@ -390,6 +406,9 @@ function showSection(sectionId) {
   if (sectionId === "reports") {
     loadReportsCharts();
   }
+  if (sectionId === "aiPrediction") {
+    loadAiPredictions();
+  }
 
   // Move Low Stock Alert to the new active section if it exists
   const lowStockAlert = document.getElementById("globalLowStockAlert");
@@ -420,8 +439,8 @@ function updateEmployeeKPIs(sales) {
     }
   });
 
-  document.getElementById("empSalesToday").innerText = `₹${salesToday}`;
-  document.getElementById("empItemsSoldToday").innerText = itemsSoldToday;
+  document.getElementById("empSalesToday").innerText = `₹${salesToday.toLocaleString()}`;
+  document.getElementById("empItemsSoldToday").innerText = itemsSoldToday.toLocaleString();
 
   // Refresh production stats
   fetch("http://127.0.0.1:3000/production/my-history", {
@@ -718,12 +737,12 @@ function updateKPIs(sales, expenses = []) {
   const netProfit = totalRevenue - totalExpenses;
 
   // Update values
-  document.getElementById("salesToday").innerText = `₹${salesToday}`;
-  document.getElementById("monthlySales").innerText = `₹${monthlySales}`;
-  document.getElementById("totalExpenses").innerText = `₹${totalExpenses}`;
-  document.getElementById("netProfit").innerText = `₹${netProfit}`;
-  document.getElementById("avgOrderValue").innerText = `₹${avgOrderValue}`;
-  document.getElementById("totalRevenue").innerText = `₹${totalRevenue}`;
+  document.getElementById("salesToday").innerText = `₹${salesToday.toLocaleString()}`;
+  document.getElementById("monthlySales").innerText = `₹${monthlySales.toLocaleString()}`;
+  document.getElementById("totalExpenses").innerText = `₹${totalExpenses.toLocaleString()}`;
+  document.getElementById("netProfit").innerText = `₹${netProfit.toLocaleString()}`;
+  document.getElementById("avgOrderValue").innerText = `₹${avgOrderValue.toLocaleString()}`;
+  document.getElementById("totalRevenue").innerText = `₹${totalRevenue.toLocaleString()}`;
 
   // Update Trends (Arrows)
   setTrend("salesTodayTrend", salesToday > 0);
@@ -917,57 +936,7 @@ function buildDashboardCharts(sales, expenses = []) {
     weeklyProfit.push(weekRev - weekExp);
   }
 
-  destroyChart('dashboardProfitAnalysisChart');
-  const ctxPA = document.getElementById('dashboardProfitAnalysisChart')?.getContext('2d');
-  if (ctxPA) {
-    dashboardChartInstances['dashboardProfitAnalysisChart'] = new Chart(ctxPA, {
-      type: 'bar',
-      data: {
-        labels: weekL,
-        datasets: [
-          {
-            label: 'Revenue',
-            data: weeklyRevenue,
-            backgroundColor: '#5DADE2', // Blue
-            borderRadius: 4
-          },
-          {
-            label: 'Expenses',
-            data: weeklyExpenses,
-            backgroundColor: '#EC7063', // Pink
-            borderRadius: 4
-          },
-          {
-            label: 'Profit',
-            data: weeklyProfit,
-            backgroundColor: '#48C9B0', // Teal
-            borderRadius: 4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ₹${ctx.raw.toLocaleString()}`
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: value => `₹${value.toLocaleString()}`
-            }
-          },
-          x: { grid: { display: false } }
-        }
-      }
-    });
-  }
+
 }
 
 // =============================
@@ -1104,67 +1073,7 @@ async function loadReportsCharts() {
 
 
 
-    // ===== CHART 3: MONTHLY SALES =====
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const monthlyLabels = Array.from({ length: daysInMonth }, (_, i) => {
-      return formatDate(new Date(currentYear, currentMonth, i + 1));
-    });
-    const monthlyData = new Array(daysInMonth).fill(0);
 
-    sales.forEach(s => {
-      if (s.status === "Completed") {
-        const d = new Date(s.date);
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-          const day = d.getDate();
-          monthlyData[day - 1] += s.total;
-        }
-      }
-    });
-
-    destroyChart('reportMonthlySalesChart');
-    const ctxMonthly = document.getElementById('reportMonthlySalesChart')?.getContext('2d');
-    if (ctxMonthly) {
-      reportChartInstances['reportMonthlySalesChart'] = new Chart(ctxMonthly, {
-        type: 'line',
-        data: {
-          labels: monthlyLabels,
-          datasets: [{
-            label: 'Daily Sales (₹)',
-            data: monthlyData,
-            borderColor: '#8e44ad',
-            backgroundColor: 'rgba(142, 68, 173, 0.1)',
-            tension: 0.1,
-            fill: true,
-            pointRadius: 2,
-            pointHoverRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            title: {
-              display: true,
-              text: `Month Total: ₹${monthlyData.reduce((a, b) => a + b, 0).toLocaleString()}`
-            },
-            tooltip: {
-              callbacks: {
-                label: ctx => `₹${ctx.raw.toLocaleString()}`
-              }
-            }
-          },
-          scales: {
-            x: { title: { display: true, text: 'Date' } },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: value => `₹${value.toLocaleString()}`
-              }
-            }
-          }
-        }
-      });
-    }
 
     // ===== CHART 4: TODAY'S SALES BREAKDOWN =====
     const categoryStats = {};
@@ -1249,18 +1158,19 @@ async function loadReportsCharts() {
       });
     }
 
-    // ===== CHART 6: YEARLY SALES TREND (Monthly Breakdown) =====
-    const yearlyLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const yearlyData = new Array(12).fill(0);
-
+    // ===== CHART 6: YEARLY SALES TREND (Multi-Year) =====
+    // Aggregate sales by Year
+    const yearlyStats = {};
     sales.forEach(s => {
       if (s.status === "Completed") {
         const d = new Date(s.date);
-        if (d.getFullYear() === currentYear) {
-          yearlyData[d.getMonth()] += s.total;
-        }
+        const y = d.getFullYear();
+        yearlyStats[y] = (yearlyStats[y] || 0) + s.total;
       }
     });
+
+    const yearLabels = Object.keys(yearlyStats).sort();
+    const yearData = yearLabels.map(y => yearlyStats[y]);
 
     destroyChart('reportYearlySalesChart');
     const ctxYearly = document.getElementById('reportYearlySalesChart')?.getContext('2d');
@@ -1268,10 +1178,10 @@ async function loadReportsCharts() {
       reportChartInstances['reportYearlySalesChart'] = new Chart(ctxYearly, {
         type: 'bar',
         data: {
-          labels: yearlyLabels,
+          labels: yearLabels,
           datasets: [{
-            label: `Sales ${currentYear} (₹)`,
-            data: yearlyData,
+            label: `Total Sales (₹)`,
+            data: yearData,
             backgroundColor: '#3498db',
             borderRadius: 4
           }]
@@ -1283,7 +1193,7 @@ async function loadReportsCharts() {
             legend: { display: false },
             title: {
               display: true,
-              text: `Year Total: ₹${yearlyData.reduce((a, b) => a + b, 0).toLocaleString()}`
+              text: `Total Revenue by Year`
             },
             tooltip: {
               callbacks: {
@@ -1306,6 +1216,121 @@ async function loadReportsCharts() {
       });
     }
 
+    // ===== CHART 3: MONTHLY SALES TREND (All Time) =====
+    // Aggregate by "Month-Year" to show full history trend
+    const monthlyTrendStats = {}; // Key: "2016-10", Value: 15000
+
+    sales.forEach(s => {
+      if (s.status === "Completed") {
+        const d = new Date(s.date);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        monthlyTrendStats[key] = (monthlyTrendStats[key] || 0) + s.total;
+      }
+    });
+
+    // Sort chronologically
+    const sortedMonthKeys = Object.keys(monthlyTrendStats).sort();
+    const monthlyTrendLabels = sortedMonthKeys.map(k => {
+      const [y, m] = k.split('-');
+      const dateObj = new Date(y, m - 1);
+      return dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    });
+    const monthlyTrendData = sortedMonthKeys.map(k => monthlyTrendStats[k]);
+
+    destroyChart('reportMonthlySalesChart');
+    const ctxMonthly = document.getElementById('reportMonthlySalesChart')?.getContext('2d');
+    if (ctxMonthly) {
+      reportChartInstances['reportMonthlySalesChart'] = new Chart(ctxMonthly, {
+        type: 'line',
+        data: {
+          labels: monthlyTrendLabels,
+          datasets: [{
+            label: 'Total Sales (₹)',
+            data: monthlyTrendData,
+            borderColor: '#8e44ad',
+            backgroundColor: 'rgba(142, 68, 173, 0.1)',
+            tension: 0.1,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: `Monthly Sales Trend (All Time)`
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `₹${ctx.raw.toLocaleString()}`
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Month' } },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: value => `₹${value.toLocaleString()}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ===== NEW: FINANCIAL SUMMARY TABLE POPULATION =====
+    const prevMonth = (currentMonth === 0) ? 11 : currentMonth - 1;
+    const prevYear = (currentMonth === 0) ? currentYear - 1 : currentYear;
+
+    let currRev = 0, prevRev = 0;
+    let currExp = 0, prevExp = 0;
+
+    sales.forEach(s => {
+      if (s.status === "Completed") {
+        const d = new Date(s.date);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) currRev += s.total;
+        else if (d.getMonth() === prevMonth && d.getFullYear() === prevYear) prevRev += s.total;
+      }
+    });
+
+    expenses.forEach(e => {
+      const d = new Date(e.date);
+      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) currExp += Number(e.amount);
+      else if (d.getMonth() === prevMonth && d.getFullYear() === prevYear) prevExp += Number(e.amount);
+    });
+
+    const currProfit = currRev - currExp;
+    const prevProfit = prevRev - prevExp;
+
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = `₹${val.toLocaleString()}`;
+    };
+
+    setVal("currMonthRev", currRev);
+    setVal("prevMonthRev", prevRev);
+    setVal("currMonthExp", currExp);
+    setVal("prevMonthExp", prevExp);
+    setVal("currMonthProfit", currProfit);
+    setVal("prevMonthProfit", prevProfit);
+
+    const setTrend = (id, curr, prev) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (prev === 0) { el.innerText = "-"; return; }
+      const pct = (((curr - prev) / Math.abs(prev || 1)) * 100).toFixed(1);
+      if (pct > 0) el.innerHTML = `<span style="color:green">↑ ${pct}%</span>`;
+      else if (pct < 0) el.innerHTML = `<span style="color:red">↓ ${Math.abs(pct)}%</span>`;
+      else el.innerText = "0%";
+    };
+
+    setTrend("revTrend", currRev, prevRev);
+    setTrend("expTrend", currExp, prevExp);
+    setTrend("profitTrend", currProfit, prevProfit);
   } catch (error) {
     console.error("Failed to load reports charts:", error);
   }
@@ -1621,7 +1646,11 @@ function loadSalesTable(queryParams = "") {
         return;
       }
 
-      sales.forEach(sale => {
+      // PERFORMANCE FIX: Only show last 100 records to prevent browser crash
+      // Kaggle dataset has 20,000+ records. Rendering all freezes the DOM.
+      const recentSales = sales.slice(-100).reverse();
+
+      recentSales.forEach(sale => {
         let actionCell = "";
         if (isPrivileged) {
           actionCell = `
@@ -1636,8 +1665,8 @@ function loadSalesTable(queryParams = "") {
             <td>${sale.itemType}</td>
             <td>${sale.product}</td>
             <td>${sale.quantity}</td>
-            <td>₹${sale.unitPrice}</td>
-            <td>₹${sale.total}</td>
+            <td>₹${Number(sale.unitPrice).toLocaleString()}</td>
+            <td>₹${Number(sale.total).toLocaleString()}</td>
             <td>${sale.saleType}</td>
             <td>${sale.paymentMode}</td>
             <td>${sale.addedBy}</td>
@@ -1646,6 +1675,14 @@ function loadSalesTable(queryParams = "") {
           </tr>
         `;
       });
+
+      if (sales.length > 100) {
+        const infoRow = document.createElement("tr");
+        infoRow.innerHTML = `<td colspan="${isPrivileged ? 10 : 9}" style="text-align:center; color:#888; padding:10px;">
+          Showing recent 100 of ${sales.length} records. Filter by date to see historical data.
+        </td>`;
+        tbody.appendChild(infoRow);
+      }
     });
 }
 
@@ -2118,7 +2155,7 @@ function showLowStockAlert(items) {
 
   alertBox.innerHTML = `
     <strong>⚠️ Low Stock Alert</strong><br>
-    ${items.map(i => `• ${i.product}: Only ${i.stock} ${i.unit || ''} remaining (Minimum: ${i.minStock})`).join("<br>")}
+    ${items.map(i => `• ${i.product}: Only ${Number(i.stock).toFixed(2).replace(/\.?0+$/, '')} ${i.unit || ''} remaining (Minimum: ${i.minStock})`).join("<br>")}
   `;
 }
 
@@ -2157,14 +2194,14 @@ function openEditInventory(item) {
 
 
 function saveEditInventory() {
-  fetch("http://127.0.0.1:3000/inventory/edit", {
+  const id = Number(document.getElementById("editId").value);
+  fetch(`http://127.0.0.1:3000/inventory/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
     body: JSON.stringify({
-      id: Number(document.getElementById("editId").value),
       stock: Number(document.getElementById("editStock").value),
       unit: document.getElementById("editUnit").value,
       minStock: Number(document.getElementById("editMinStock").value),
@@ -2175,6 +2212,7 @@ function saveEditInventory() {
     .then(() => {
       document.getElementById("editInventoryModal").classList.add("hidden");
       loadInventory();
+      refreshKPIsOnly();
     })
     .catch(err => console.error(err));
 }
@@ -2545,9 +2583,10 @@ async function loadExpensesTable() {
       <tr>
         <th style="font-size:11px;">Material Type</th>
         <th style="font-size:11px;">Item Type</th>
-        <th style="font-size:11px;">Qty</th>
+        <th style="font-size:11px;">Purchased</th>
         <th style="font-size:11px;">Unit</th>
         <th style="font-size:11px;">Min Stock</th>
+        <th style="font-size:11px;">Total Live Stock</th>
         <th style="font-size:11px;">Stock Status</th>
         <th style="font-size:11px;">Total Amount</th>
         <th style="font-size:11px;">Payment</th>
@@ -2567,6 +2606,7 @@ async function loadExpensesTable() {
         })
       ]);
       const expenses = await expRes.json();
+      currentExpenses = expenses; // Store globally
       const inventory = await invRes.json();
       tbody.innerHTML = "";
 
@@ -2589,9 +2629,11 @@ async function loadExpensesTable() {
         const invItem = inventory.find(i => i.product.toLowerCase().trim() === itemType.toLowerCase().trim());
         let stockStatus = '<span class="status-out" style="font-size:10px;">Unknown</span>';
         if (invItem) {
-          if (invItem.stock <= 0) {
+          const currentStock = Number(invItem.stock);
+          const minStockLimit = Number(invItem.minStock);
+          if (currentStock <= 0) {
             stockStatus = '<span class="status-out" style="padding:2px 8px; font-size:10px; border-radius:10px; font-weight:600;">Out of Stock</span>';
-          } else if (invItem.stock <= invItem.minStock) {
+          } else if (currentStock <= minStockLimit) {
             stockStatus = '<span class="pending" style="padding:2px 8px; font-size:10px; border-radius:10px; font-weight:600;">Low Stock</span>';
           } else {
             stockStatus = '<span class="success" style="padding:2px 8px; font-size:10px; border-radius:10px; font-weight:600;">In Stock</span>';
@@ -2599,12 +2641,15 @@ async function loadExpensesTable() {
         }
 
         const row = document.createElement("tr");
+        const liveStock = invItem ? `<span style="font-weight:700; color:${Number(invItem.stock) <= Number(invItem.minStock) ? 'var(--bakery-accent)' : 'var(--success-color)'};">${Number(invItem.stock).toFixed(2).replace(/\.?0+$/, '')} ${unit}</span>` : "-";
+
         row.innerHTML = `
           <td style="font-size:12px;">${materialType}</td>
           <td style="font-size:12px; font-weight:600;">${itemType}</td>
           <td style="font-size:12px;">${qty}</td>
           <td style="font-size:12px;">${unit}</td>
           <td style="font-size:12px;">${minStock}</td>
+          <td style="font-size:12px;">${liveStock}</td>
           <td style="font-size:12px;">${stockStatus}</td>
           <td style="font-size:12px;">₹${Number(exp.amount).toFixed(2)}</td>
           <td style="font-size:12px;">${exp.paymentMethod}</td>
@@ -2612,7 +2657,7 @@ async function loadExpensesTable() {
           <td style="font-size:12px;">${formatDate(exp.date)}</td>
           <td>
             <div style="display:flex; gap:2px;">
-              <button class="btn-xs edit" style="padding:4px 6px;" onclick="editExpense('${JSON.stringify(exp).replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">✏️</button>
+              <button class="btn-xs edit" style="padding:4px 6px;" onclick="editExpense(${exp.id})">✏️</button>
               <button class="btn-xs delete" style="padding:4px 6px;" onclick="deleteExpense(${exp.id})">🗑</button>
               <button class="btn-xs download" style="padding:4px 6px;" onclick="downloadExpenseInvoice(${exp.id})">📄</button>
             </div>
@@ -2645,6 +2690,7 @@ async function loadExpensesTable() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const expenses = await res.json();
+      currentExpenses = expenses; // Cache
       tbody.innerHTML = "";
 
       if (!Array.isArray(expenses) || expenses.length === 0) {
@@ -2668,7 +2714,7 @@ async function loadExpensesTable() {
           <td>₹${Number(exp.amount).toFixed(2)}</td>
           <td>${formatDate(exp.date)}</td>
           <td>
-            <button class="btn-xs edit" onclick="editExpense('${JSON.stringify(exp).replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">Edit</button>
+            <button class="btn-xs edit" onclick="editExpense(${exp.id})">Edit</button>
             <button class="btn-xs delete" onclick="deleteExpense(${exp.id})">Del</button>
             <button class="btn-xs download" onclick="downloadExpenseInvoice(${exp.id})">Invoice</button>
           </td>
@@ -2695,6 +2741,7 @@ async function loadExpensesTable() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const expenses = await res.json();
+      currentExpenses = expenses; // Cache
       tbody.innerHTML = "";
 
       if (!Array.isArray(expenses) || expenses.length === 0) {
@@ -2722,7 +2769,7 @@ async function loadExpensesTable() {
           <td>₹${Number(exp.amount).toFixed(2)}</td>
           <td>${formatDate(exp.date)}</td>
           <td>
-            <button class="btn-xs edit" onclick="editExpense('${JSON.stringify(exp).replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">Edit</button>
+            <button class="btn-xs edit" onclick="editExpense(${exp.id})">Edit</button>
             <button class="btn-xs delete" onclick="deleteExpense(${exp.id})">Del</button>
             <button class="btn-xs download" onclick="downloadExpenseInvoice(${exp.id})">Invoice</button>
           </td>
@@ -2737,15 +2784,11 @@ async function loadExpensesTable() {
 
 document.getElementById("expenseFilterCategory")?.addEventListener("change", loadExpensesTable);
 
-window.editExpense = function (expInput) {
-  let exp = expInput;
-  if (typeof expInput === "string") {
-    try {
-      exp = JSON.parse(expInput);
-    } catch (e) {
-      console.error("Failed to parse expense JSON:", e);
-      return;
-    }
+window.editExpense = function (id) {
+  const exp = currentExpenses.find(e => e.id === id);
+  if (!exp) {
+    console.error("Expense not found in cache:", id);
+    return;
   }
   document.getElementById("expenseId").value = exp.id;
   document.getElementById("expenseCategory").value = exp.category;
@@ -2829,7 +2872,403 @@ function downloadInvoice(saleId) {
 
 
 // =============================
+// DOWNLOAD REPORT (PDF/EXCEL)
+// =============================
+window.downloadReport = function (type, period) {
+  const url = `http://127.0.0.1:3000/reports/export/${type}?period=${period}&token=${token}`;
+
+  // Create a temporary link to trigger the download
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `Business_Report_${period}_${Date.now()}.${type === 'excel' ? 'xlsx' : 'pdf'}`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+
+// =============================
+// TRIGGER EMAIL REPORT (ON-DEMAND)
+// =============================
+window.triggerEmailReport = async function (period) {
+  if (!confirm(`Generate and send ${period} report to your registered email?`)) return;
+
+  try {
+    const res = await fetch("http://127.0.0.1:3000/reports/generate-on-demand", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ period })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to request report generation.");
+  }
+};
+
+
+// =============================
 // DEFAULT LOAD
 // =============================
 document.addEventListener("DOMContentLoaded", loadDashboard);
 
+// =============================
+// AI PREDICTION (Weighted Regression + Gap Handling)
+// =============================
+let predictionChartInstance = null;
+
+async function loadAiPredictions() {
+  try {
+    const [salesRes, expensesRes] = await Promise.all([
+      fetch("http://127.0.0.1:3000/sales", {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch("http://127.0.0.1:3000/expenses", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ]);
+
+    const sales = await salesRes.json();
+    const expenses = await expensesRes.json();
+
+    if (!Array.isArray(sales) || !Array.isArray(expenses)) {
+      console.error("Invalid data format received");
+      document.getElementById("predSalesNextMonth").innerText = "Error";
+      document.getElementById("predProfitNextMonth").innerText = "Error";
+      return;
+    }
+
+    // 1. Prepare Data - Monthly Aggregation
+    const monthlyStats = {};
+
+    // Helper: Parse YYYY-MM and get Absolute Month Index (Year*12 + Month)
+    const getAbsMonth = (dateObj) => dateObj.getFullYear() * 12 + dateObj.getMonth();
+    const getLabel = (dateObj) => dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+    // Sales Aggregation
+    sales.forEach(s => {
+      if (s.status !== "Completed") return;
+      const d = new Date(s.date);
+      const key = getAbsMonth(d);
+      // Store using AbsMonth as key to naturally handle sorting
+      if (!monthlyStats[key]) monthlyStats[key] = { absMonth: key, date: d, sales: 0, expenses: 0 };
+      monthlyStats[key].sales += Number(s.total);
+    });
+
+    // Expenses Aggregation
+    expenses.forEach(e => {
+      const d = new Date(e.date);
+      const key = getAbsMonth(d);
+      if (!monthlyStats[key]) monthlyStats[key] = { absMonth: key, date: d, sales: 0, expenses: 0 };
+      monthlyStats[key].expenses += Number(e.amount);
+    });
+
+    // Convert to Array and Sort by Time
+    const sortedData = Object.values(monthlyStats).sort((a, b) => a.absMonth - b.absMonth);
+
+    if (sortedData.length === 0) {
+      document.getElementById("predSalesNextMonth").innerText = "No Data";
+      document.getElementById("predProfitNextMonth").innerText = "No Data";
+      return;
+    }
+
+    // Extract X and Y vectors
+    const xValues = sortedData.map(d => d.absMonth); // 24204, 24205...
+    const ySales = sortedData.map(d => d.sales);
+    const yProfit = sortedData.map(d => d.sales - d.expenses);
+    const labels = sortedData.map(d => getLabel(d.date));
+
+    // Next Target Month
+    const lastAbsMonth = xValues[xValues.length - 1];
+    const nextAbsMonth = lastAbsMonth + 1;
+
+    // Formatting Next Month Label
+    const nextDate = new Date();
+    nextDate.setMonth(nextDate.getMonth() + 1); // rough approx for display if needed, but we use math for value
+    // Precise next month label from ID
+    const nextYear = Math.floor(nextAbsMonth / 12);
+    const nextMonthIndex = nextAbsMonth % 12;
+    const nextMonthLabel = new Date(nextYear, nextMonthIndex).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + " (Forecast)";
+
+
+    let nextSales, nextProfit;
+
+    // ALGORITHM SELECTION
+    if (sortedData.length === 1) {
+      // Not enough for regression, assume steady state
+      nextSales = ySales[0];
+      nextProfit = yProfit[0];
+    } else {
+      // k-Nearest Neighbors (k-NN) Regressor
+      // We use k=3 to average the behavior of the most recent 3 months
+      const salesModel = new KNNRegressor(3);
+      salesModel.train(xValues, ySales);
+
+      const profitModel = new KNNRegressor(3);
+      profitModel.train(xValues, yProfit);
+
+      // Predict next month
+      nextSales = Math.round(salesModel.predict(nextAbsMonth));
+      nextProfit = Math.round(profitModel.predict(nextAbsMonth));
+    }
+
+    // Update DOM
+    document.getElementById("predSalesNextMonth").innerText = "₹" + nextSales.toLocaleString();
+    document.getElementById("predProfitNextMonth").innerText = "₹" + nextProfit.toLocaleString();
+    if (document.getElementById("predSalesNextMonthHighlight")) {
+      document.getElementById("predSalesNextMonthHighlight").innerText = "₹" + nextSales.toLocaleString();
+    }
+
+    // Chart
+    if (predictionChartInstance) predictionChartInstance.destroy();
+
+    const ctx = document.getElementById("predictionChart").getContext("2d");
+
+    // Prepare chart data for Line Chart with Forecast and CI
+    const chartLabels = [...labels, nextMonthLabel];
+
+    // Dataset 1: Actual Sales (null for the last point)
+    const chartActual = [...ySales, null];
+
+    // Dataset 2: Forecast Sales (null for all but last two points)
+    const chartForecast = new Array(chartLabels.length).fill(null);
+    chartForecast[ySales.length - 1] = ySales[ySales.length - 1]; // Start from last actual
+    chartForecast[chartLabels.length - 1] = nextSales; // End at forecast
+
+    // Dataset 3 & 4: Confidence Interval area
+    const upperCI = new Array(chartLabels.length).fill(null);
+    const lowerCI = new Array(chartLabels.length).fill(null);
+
+    // We only show CI for the forecast part
+    upperCI[ySales.length - 1] = ySales[ySales.length - 1];
+    lowerCI[ySales.length - 1] = ySales[ySales.length - 1];
+    upperCI[chartLabels.length - 1] = nextSales * 1.15; // +15%
+    lowerCI[chartLabels.length - 1] = nextSales * 0.85; // -15%
+
+    predictionChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            label: 'Historical Sales',
+            data: chartActual,
+            borderColor: '#3498db',
+            backgroundColor: '#3498db',
+            borderWidth: 3,
+            pointRadius: 5,
+            pointBackgroundColor: '#3498db',
+            tension: 0.3,
+            fill: false,
+            order: 1
+          },
+          {
+            label: 'Forecasted Sales',
+            data: chartForecast,
+            borderColor: '#f39c12',
+            backgroundColor: '#f39c12',
+            borderWidth: 3,
+            borderDash: [5, 5],
+            pointRadius: 6,
+            pointBackgroundColor: '#f39c12',
+            tension: 0.3,
+            fill: false,
+            order: 2
+          },
+          {
+            label: 'Confidence Interval',
+            data: upperCI,
+            borderColor: 'rgba(52, 152, 219, 0)',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: {
+              target: 'lowerCI',
+              above: 'rgba(52, 152, 219, 0.1)'
+            },
+            pointRadius: 0,
+            tension: 0.3,
+            order: 4
+          },
+          {
+            label: 'Lower Bound',
+            id: 'lowerCI',
+            data: lowerCI,
+            borderColor: 'rgba(52, 152, 219, 0)',
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            order: 3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: false // We use our custom legend in HTML
+          },
+          tooltip: {
+            padding: 12,
+            backgroundColor: 'rgba(26, 42, 68, 0.9)',
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function (context) {
+                let label = context.dataset.label || '';
+                if (label === 'Lower Bound' || label === 'Confidence Interval') return null;
+                if (label) {
+                  label += ': ';
+                }
+                if (context.parsed.y !== null) {
+                  label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+                }
+                return label;
+              }
+            },
+            filter: function (tooltipItem) {
+              return tooltipItem.datasetIndex < 2; // Only show Actual and Forecast
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              drawBorder: false
+            },
+            ticks: {
+              font: { size: 11 },
+              color: '#999',
+              callback: v => '₹' + v.toLocaleString()
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: { size: 11 },
+              color: '#999'
+            }
+          }
+        }
+      }
+    });
+
+  } catch (e) {
+    console.error("AI Prediction Error", e);
+    document.getElementById("predSalesNextMonth").innerText = "Error";
+    document.getElementById("predProfitNextMonth").innerText = "Error";
+  }
+}
+
+/**
+ * k-Nearest Neighbors (k-NN) Regressor
+ * Finds the 'k' closest historical data points in time and averages them.
+ * Highly responsive to the most recent behavior.
+ */
+class KNNRegressor {
+  constructor(k = 3) {
+    this.k = k;
+    this.data = [];
+  }
+
+  train(x, y) {
+    this.data = x.map((val, i) => ({ x: val, y: y[i] }));
+  }
+
+  predict(targetX) {
+    if (this.data.length === 0) return 0;
+
+    // Calculate distances (absolute difference in time)
+    const distances = this.data.map(d => ({
+      y: d.y,
+      dist: Math.abs(d.x - targetX)
+    }));
+
+    // Sort by distance (closest first)
+    distances.sort((a, b) => a.dist - b.dist);
+
+    // Take top K and average
+    const kClosest = distances.slice(0, Math.min(this.k, distances.length));
+    const sum = kClosest.reduce((acc, d) => acc + d.y, 0);
+
+    return sum / kClosest.length;
+  }
+}
+
+/**
+ * Simple Decision Tree Regressor
+ * Splits data into segments based on time to find patterns.
+ * Note: Trees are excellent for non-linear patterns but don't extrapolate trends.
+ */
+class DecisionTreeRegressor {
+  constructor(maxDepth = 4) {
+    this.maxDepth = maxDepth;
+    this.tree = null;
+  }
+
+  train(x, y) {
+    const data = x.map((val, i) => ({ x: val, y: y[i] }));
+    this.tree = this._build(data, 0);
+  }
+
+  _build(data, depth) {
+    if (data.length === 0) return null;
+    const meanY = data.reduce((sum, d) => sum + d.y, 0) / data.length;
+
+    if (depth >= this.maxDepth || data.length <= 2) {
+      return { value: meanY };
+    }
+
+    let bestSplit = null;
+    let minMSE = Infinity;
+
+    // Try splitting at every point to find best MSE reduction
+    for (let i = 0; i < data.length - 1; i++) {
+      const split = (data[i].x + data[i + 1].x) / 2;
+      const left = data.filter(d => d.x <= split);
+      const right = data.filter(d => d.x > split);
+
+      if (left.length === 0 || right.length === 0) continue;
+
+      const mse = this._getMSE(left) + this._getMSE(right);
+      if (mse < minMSE) {
+        minMSE = mse;
+        bestSplit = { split, left, right };
+      }
+    }
+
+    if (!bestSplit) return { value: meanY };
+
+    return {
+      split: bestSplit.split,
+      left: this._build(bestSplit.left, depth + 1),
+      right: this._build(bestSplit.right, depth + 1)
+    };
+  }
+
+  _getMSE(data) {
+    const mean = data.reduce((sum, d) => sum + d.y, 0) / data.length;
+    return data.reduce((sum, d) => sum + Math.pow(d.y - mean, 2), 0);
+  }
+
+  predict(x) {
+    let node = this.tree;
+    while (node && node.value === undefined) {
+      node = x <= node.split ? node.left : node.right;
+    }
+    return node ? node.value : 0;
+  }
+}

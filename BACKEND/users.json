@@ -3,6 +3,7 @@
     "username": "ekta@16",
     "password": "1628",
     "role": "Owner",
+    "email": "ekta@example.com",
     "businessType": "Textiles",
     "businessId": "TE-1742"
   },
@@ -10,6 +11,7 @@
     "username": "shreya18#",
     "password": "0000",
     "role": "Employee",
+    "email": "shreya@example.com",
     "businessType": "Textiles",
     "businessId": "TE-1742"
   },
@@ -17,6 +19,7 @@
     "username": "krati60",
     "password": "123",
     "role": "Owner",
+    "email": "ektaavermaa16@gmail.com",
     "businessType": "Manufacturing",
     "businessId": "MA-2818"
   },
@@ -24,6 +27,7 @@
     "username": "sam12",
     "password": "1010",
     "role": "Employee",
+    "email": "sam@example.com",
     "businessType": "Manufacturing",
     "businessId": "MA-2818"
   },
@@ -31,6 +35,25 @@
     "username": "Ekta",
     "password": "1628",
     "role": "Accountant",
+    "email": "ekta_acc@example.com",
+    "businessType": "Manufacturing",
+    "businessId": "MA-2818"
+  },
+  {
+    "username": "ria",
+    "fullname": "Ria",
+    "email": "ektaavermaa16@gmail.com",
+    "password": "147",
+    "role": "Owner",
+    "businessType": "Manufacturing",
+    "businessId": "MA-1787"
+  },
+  {
+    "username": "marry",
+    "fullname": "Marry",
+    "email": "ektav1603@gmail.com",
+    "password": "963",
+    "role": "Employee",
     "businessType": "Manufacturing",
     "businessId": "MA-2818"
   }

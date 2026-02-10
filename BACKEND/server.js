@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const PDFDocument = require("pdfkit");
@@ -5,17 +6,319 @@ const bodyParser = require("body-parser");
 const fs = require("fs");
 const cors = require("cors");
 const verifyToken = require("./middleware/auth");
+const nodemailer = require("nodemailer");
 const path = require("path");
+const ExcelJS = require("exceljs");
+const cron = require("node-cron");
+
+
+// ================= EMAIL CONFIGURATION =================
+const emailUser = (process.env.EMAIL_USER || "").trim();
+const emailPass = (process.env.EMAIL_PASS || "").replace(/\s/g, ""); 
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: emailUser,
+    pass: emailPass
+  }
+});
+
+console.log("Email Notification Module Initialized");
+console.log("-----------------------------------------");
+console.log("EMAIL_USER:", emailUser ? `${emailUser.slice(0, 3)}...${emailUser.slice(-8)}` : "MISSING");
+console.log("EMAIL_PASS Length:", emailPass.length, "chars");
+if (emailPass.length !== 16 && emailPass.length !== 0) {
+  console.warn("⚠️ WARNING: Gmail App Passwords should be exactly 16 characters long.");
+}
+console.log("-----------------------------------------");
+
+// ================= REPORT GENERATION LOGIC =================
+
+// Create reports folder if missing
+const reportsDir = path.join(__dirname, "generated_reports");
+if (!fs.existsSync(reportsDir)) {
+  fs.mkdirSync(reportsDir);
+}
+
+/**
+ * Calculates metrics and generates PDF + Excel reports
+ */
+/**
+ * Helper to calculate report metrics
+ */
+function getReportData(businessId, period = "Weekly") {
+  const sales = loadSales().filter(s => s.business === businessId && s.status === "Completed");
+  const expenses = loadExpenses().filter(e => e.business === businessId);
+
+  const now = new Date();
+  const filterDate = new Date();
+  if (period === "Daily") filterDate.setDate(now.getDate() - 1);
+  else if (period === "Weekly") filterDate.setDate(now.getDate() - 7);
+  else if (period === "Monthly") filterDate.setMonth(now.getMonth() - 1);
+
+  const filteredSales = sales.filter(s => new Date(s.date) >= filterDate);
+  const filteredExpenses = expenses.filter(e => new Date(e.date) >= filterDate);
+
+  const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+  const totalCost = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalProfit = totalSales - totalCost;
+  const profitMargin = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(2) : 0;
+
+  return {
+    totalSales, totalCost, totalProfit, profitMargin,
+    filteredSales, filteredExpenses, filterDate, now, period, businessId
+  };
+}
+
+/**
+ * Generates PDF into a file path and returns a promise
+ */
+function generatePDFReport(data, filePath) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50 });
+      const stream = fs.createWriteStream(filePath);
+
+      stream.on("finish", () => {
+        console.log(`PDF successfully written to ${filePath}`);
+        resolve();
+      });
+      stream.on("error", (err) => {
+        console.error("PDF Stream Error:", err);
+        reject(err);
+      });
+
+      doc.pipe(stream);
+
+      doc.fontSize(20).text(`${data.period} Business Performance Report`, { align: "center" });
+      doc.moveDown();
+      doc.fontSize(12).text(`Generated on: ${new Date().toLocaleString()}`);
+      doc.text(`Period: ${data.filterDate.toLocaleDateString()} to ${data.now.toLocaleDateString()}`);
+      doc.moveDown();
+
+      doc.fontSize(14).text("Financial Summary", { underline: true });
+      doc.fontSize(12).text(`Total Sales: ₹${data.totalSales.toLocaleString()}`);
+      doc.text(`Total Expenses: ₹${data.totalCost.toLocaleString()}`);
+      doc.text(`Net Profit: ₹${data.totalProfit.toLocaleString()}`);
+      doc.text(`Profit Margin: ${data.profitMargin}%`);
+      doc.moveDown();
+
+      doc.fontSize(14).text("Sales Breakdown", { underline: true });
+      data.filteredSales.forEach((s, idx) => {
+        doc.fontSize(10).text(`${idx + 1}. ${s.product} - ₹${s.total} (${new Date(s.date).toLocaleDateString()})`);
+      });
+
+      doc.end();
+    } catch (err) {
+      console.error("Critical error in generatePDFReport:", err);
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Generates Excel Workbook object
+ */
+async function generateExcelReport(data) {
+  const workbook = new ExcelJS.Workbook();
+
+  // 1. Summary Sheet
+  const summarySheet = workbook.addWorksheet("Business Summary");
+  summarySheet.columns = [
+    { header: "Metric Description", key: "metric", width: 30 },
+    { header: "Financial Value", key: "value", width: 20 }
+  ];
+
+  summarySheet.addRows([
+    { metric: "Report Period", value: data.period },
+    { metric: "Start Date", value: data.filterDate.toLocaleDateString() },
+    { metric: "End Date", value: data.now.toLocaleDateString() },
+    { metric: "", value: "" }, // Spacer
+    { metric: "Total Gross Sales", value: `₹${data.totalSales.toLocaleString()}` },
+    { metric: "Total Expenses", value: `₹${data.totalCost.toLocaleString()}` },
+    { metric: "Net Profit", value: `₹${data.totalProfit.toLocaleString()}` },
+    { metric: "Profit Margin (%)", value: `${data.profitMargin}%` }
+  ]);
+
+  // Style Header
+  summarySheet.getRow(1).font = { bold: true };
+  summarySheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+
+  // 2. Detailed Sales Sheet
+  const salesSheet = workbook.addWorksheet("Detailed Sales");
+  salesSheet.columns = [
+    { header: "Date", key: "date", width: 12 },
+    { header: "Category", key: "itemType", width: 15 },
+    { header: "Product Name", key: "product", width: 25 },
+    { header: "Qty", key: "quantity", width: 8 },
+    { header: "Unit Price", key: "unitPrice", width: 12 },
+    { header: "Total (₹)", key: "total", width: 12 },
+    { header: "Payment Mode", key: "paymentMode", width: 15 },
+    { header: "Sold By", key: "addedBy", width: 15 }
+  ];
+
+  data.filteredSales.forEach(s => {
+    salesSheet.addRow({
+      date: new Date(s.date).toLocaleDateString(),
+      itemType: s.itemType,
+      product: s.product,
+      quantity: s.quantity,
+      unitPrice: s.unitPrice,
+      total: s.total,
+      paymentMode: s.paymentMode,
+      addedBy: s.addedBy
+    });
+  });
+
+  salesSheet.getRow(1).font = { bold: true };
+  salesSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F6EF' } }; // Light green
+
+  // 3. Detailed Expenses Sheet
+  const expSheet = workbook.addWorksheet("Detailed Expenses");
+  expSheet.columns = [
+    { header: "Date", key: "date", width: 12 },
+    { header: "Category", key: "category", width: 15 },
+    { header: "Item/Type", key: "itemType", width: 20 },
+    { header: "Qty", key: "quantity", width: 8 },
+    { header: "Unit", key: "unit", width: 8 },
+    { header: "Amount (₹)", key: "amount", width: 12 },
+    { header: "Added By", key: "addedBy", width: 15 }
+  ];
+
+  data.filteredExpenses.forEach(e => {
+    expSheet.addRow({
+      date: new Date(e.date).toLocaleDateString(),
+      category: e.category,
+      itemType: e.itemType || "-",
+      quantity: e.quantity || "-",
+      unit: e.unit || "-",
+      amount: e.amount,
+      addedBy: e.addedBy
+    });
+  });
+
+  expSheet.getRow(1).font = { bold: true };
+  expSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBE7E7' } }; // Light red
+
+  return workbook;
+}
+
+/**
+ * Wrapper for cron/on-demand email
+ */
+async function generateAndEmailReport(businessId, userEmail, period = "Weekly") {
+  console.log(`Generating ${period} report for ${businessId} (${userEmail})...`);
+
+  try {
+    const data = getReportData(businessId, period);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+    const pdfPath = path.join(reportsDir, `Report_${period}_${timestamp}.pdf`);
+    const excelPath = path.join(reportsDir, `Report_${period}_${timestamp}.xlsx`);
+
+    console.log("Paths created:", { pdfPath, excelPath });
+
+    // 1. Generate PDF (Await completion)
+    try {
+      await generatePDFReport(data, pdfPath);
+      console.log("PDF generated successfully");
+    } catch (pdfError) {
+      console.error("PDF Generation Failed:", pdfError);
+      throw new Error(`PDF Generation Failed: ${pdfError.message}`);
+    }
+
+    // 2. Generate Excel (Await completion)
+    try {
+      const workbook = await generateExcelReport(data);
+      await workbook.xlsx.writeFile(excelPath);
+      console.log(`Excel successfully written to ${excelPath}`);
+    } catch (excelError) {
+      console.error("Excel Generation Failed:", excelError);
+      throw new Error(`Excel Generation Failed: ${excelError.message}`);
+    }
+
+    // 3. Send Email
+    const mailOptions = {
+      from: emailUser,
+      to: userEmail,
+      subject: `📊 ${period} Business Report - ${businessId}`,
+      text: `Hello,\n\nPlease find attached the ${period.toLowerCase()} performance report for your business.\n\nSummary:\n- Total Sales: ₹${data.totalSales.toLocaleString()}\n- Net Profit: ₹${data.totalProfit.toLocaleString()}\n- Profit Margin: ${data.profitMargin}%\n\nRegards,\nSales Business Team`,
+      attachments: [
+        { filename: path.basename(pdfPath), path: pdfPath },
+        { filename: path.basename(excelPath), path: excelPath }
+      ]
+    };
+
+    console.log("Sending email...");
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent info: ${info.messageId}`);
+    return { success: true };
+
+  } catch (err) {
+    console.error("REPORT ERROR:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ================= SCHEDULING (CRON) =================
+
+// 1. Automatic Daily Report: Every day at 9:00 AM
+cron.schedule("0 9 * * *", async () => {
+  console.log("Running scheduled daily reports...");
+  const owners = loadUsers().filter(u => u.role === "Owner" && u.email);
+  for (const owner of owners) {
+    await generateAndEmailReport(owner.businessId, owner.email, "Daily");
+  }
+});
+
+// 2. Automatic Weekly Report: Every Monday at 9:00 AM
+cron.schedule("0 9 * * 1", async () => {
+  console.log("Running scheduled weekly reports...");
+  const owners = loadUsers().filter(u => u.role === "Owner" && u.email);
+  for (const owner of owners) {
+    await generateAndEmailReport(owner.businessId, owner.email, "Weekly");
+  }
+});
+
+// 3. Automatic Monthly Report: 1st of every month at 9:00 AM
+cron.schedule("0 9 1 * *", async () => {
+  console.log("Running scheduled monthly reports...");
+  const owners = loadUsers().filter(u => u.role === "Owner" && u.email);
+  for (const owner of owners) {
+    await generateAndEmailReport(owner.businessId, owner.email, "Monthly");
+  }
+});
 
 
 const app = express();
 app.use(express.json());
+
+// ================= TEST EMAIL ENDPOINT =================
+app.get("/test-email", async (req, res) => {
+  console.log("Test email endpoint hit");
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.EMAIL_USER, // Send to yourself
+    subject: "Test Email from Business Analyzer",
+    text: "If you are reading this, your email configuration is working perfectly!"
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ message: "Test email sent successfully! Check your inbox." });
+  } catch (error) {
+    console.error("Test email failed:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static("public"));
 
 
-const SECRET_KEY = "mysecretkey";
+const SECRET_KEY = process.env.SECRET_KEY || "mysecretkey";
 const USERS_FILE = "users.json";
 const EXPENSES_FILE = path.join(__dirname, "expenses.json");
 
@@ -57,7 +360,7 @@ function generateBusinessId(businessType) {
 
 /* ----------------- REGISTER-------------------  */
 app.post("/register", (req, res) => {
-  const { username, password, role, businessType, businessId } = req.body;
+  const { username, fullname, email, password, role, businessType, businessId } = req.body;
   let users = loadUsers();
 
   // Duplicate username not allowed
@@ -100,6 +403,8 @@ app.post("/register", (req, res) => {
   // ================= SAVE USER =================
   const newUser = {
     username,
+    fullname,
+    email,
     password,
     role,
     businessType,
@@ -242,6 +547,50 @@ app.get("/dashboard", verifyToken, (req, res) => {
   });
 });
 
+// ================= EMAIL NOTIFICATION LOGIC =================
+
+function getOwnerEmail(businessId) {
+  const users = loadUsers();
+  const owner = users.find(u => u.businessId === businessId && u.role === "Owner");
+  return owner ? owner.email : null;
+}
+
+async function sendLowStockEmail(ownerEmail, item) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER, 
+    to: ownerEmail,
+    subject: `⚠️ Low Stock Alert: ${item.product}`,
+    text: `Hello,\n\nThis is an automated alert to inform you that the stock for "${item.product}" has reached or fallen below the minimum level.\n\nCurrent Stock: ${item.stock} ${item.unit || ''}\nMinimum Level: ${item.minStock} ${item.unit || ''}\n\nPlease refill the stocks soon.\n\nBest regards,\nAgriConnect System`
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Low stock email sent to ${ownerEmail} for ${item.product}`);
+  } catch (error) {
+    console.error("Error sending low stock email:", error.message);
+  }
+}
+
+function checkLowStockAndNotify(businessId, item) {
+  console.log(`Checking stock for ${item.product}: Stock=${item.stock}, Min=${item.minStock}`);
+  if (item.minStock !== undefined && item.minStock !== null &&
+    Number(item.stock) <= Number(item.minStock) &&
+    Number(item.minStock) > 0) {
+
+    console.log(`Low stock condition met for ${item.product}. Fetching owner email...`);
+    const ownerEmail = getOwnerEmail(businessId);
+    if (ownerEmail) {
+      console.log(`Sending email to owner: ${ownerEmail}`);
+      sendLowStockEmail(ownerEmail, item);
+    } else {
+      console.log(`No owner found for businessId ${businessId}`);
+    }
+  } else {
+    console.log(`Stock for ${item.product} is above minimum or minStock is 0.`);
+  }
+}
+
+
 /* ---------------- ADD SALES ---------------- */
 
 
@@ -316,6 +665,9 @@ app.post("/sales/add", verifyToken, (req, res) => {
   if (finishedItem) {
     finishedItem.stock = Math.max(0, Number(finishedItem.stock) - Number(quantity));
     saveInventory(inventory);
+
+    // Check for low stock alert
+    checkLowStockAndNotify(req.user.businessId, finishedItem);
   }
 
   res.json({
@@ -496,6 +848,15 @@ app.put("/expenses/:id", verifyToken, (req, res) => {
   saveExpenses(expenses);
 
   res.json({ message: "Expense updated successfully" });
+
+  // If raw material, check stock levels
+  if (expenses[index].category === "🌾 Raw Materials" && expenses[index].itemType) {
+    const inventory = loadInventory();
+    const item = inventory.find(i => i.product.toLowerCase() === expenses[index].itemType.toLowerCase() && i.business === req.user.businessId);
+    if (item) {
+      checkLowStockAndNotify(req.user.businessId, item);
+    }
+  }
 });
 
 app.delete("/expenses/:id", verifyToken, (req, res) => {
@@ -681,6 +1042,13 @@ app.post("/inventory/add", verifyToken, (req, res) => {
   }
 
   saveInventory(inventory);
+
+  // Check for low stock alert if it was a deduction or if it's still low
+  const updatedItem = inventory.find(i => i.product === normalizedProduct && i.business === req.user.businessId);
+  if (updatedItem) {
+    checkLowStockAndNotify(req.user.businessId, updatedItem);
+  }
+
   res.json({ message: "Inventory updated successfully" });
 });
 
@@ -888,6 +1256,17 @@ app.put("/production/:batchId/status", verifyToken, (req, res) => {
       });
     }
     saveInventory(inventory);
+
+    // Check for low stock alert on ingredients
+    if (recipe) {
+      for (let mat in recipe.materials) {
+        const invItem = inventory.find(i => i.product.toLowerCase() === mat.toLowerCase() && i.business === req.user.businessId);
+        if (invItem) {
+          checkLowStockAndNotify(req.user.businessId, invItem);
+        }
+      }
+    }
+
   }
 
   // Update Status
@@ -896,6 +1275,36 @@ app.put("/production/:batchId/status", verifyToken, (req, res) => {
 
   res.json({ message: `Production ${status}` });
 });
+
+
+// ================= ON-DEMAND REPORT GENERATION =================
+app.post("/reports/generate-on-demand", verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { period } = req.body; // "Daily", "Weekly", or "Monthly"
+  const user = loadUsers().find(u => u.username === req.user.username);
+
+  if (!user || !user.email) {
+    return res.status(400).json({ message: "User email not found in records" });
+  }
+
+  // Run in background to prevent timeout and "false negative" errors on frontend
+  generateAndEmailReport(req.user.businessId, user.email, period || "Weekly")
+    .then(result => {
+      if (result.success) {
+        console.log(`Report sent successfully to ${user.email}`);
+      } else {
+        console.error(`Failed to send report to ${user.email}:`, result.error);
+      }
+    })
+    .catch(err => console.error("Critical background report error:", err));
+
+  // Respond immediately
+  res.json({ message: "Report generation initiated. You will receive the email shortly." });
+});
+
 
 
 // ================= VIEW ALL USERS (OWNER ONLY) =================
@@ -1040,6 +1449,9 @@ app.put("/inventory/:id", verifyToken, (req, res) => {
 
   saveInventory(inventory);
 
+  // Check for low stock alert
+  checkLowStockAndNotify(req.user.businessId, item);
+
   res.json({ message: "Inventory updated successfully" });
 });
 
@@ -1143,6 +1555,96 @@ app.get(
     doc.end();
   }
 );
+
+
+// ================= REPORT EXPORT ENDPOINTS =================
+
+// Helper to inject token from query (for direct browser downloads)
+const injectToken = (req, res, next) => {
+  if (!req.headers.authorization && req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+};
+
+app.get("/reports/export/pdf", injectToken, verifyToken, (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { period } = req.query;
+  const data = getReportData(req.user.businessId, period || "Weekly");
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename=Report_${period}_${Date.now()}.pdf`);
+
+  // Direct download doesn't NEED to save a file, but for simplicity we reuse the logic
+  // and pipe to res. However, our refactored generatePDFReport takes a path.
+  // Let's create a temporary path or refactor back to support stream + path.
+  // Actually, we can just use doc directly for direct download to avoid disk I/O.
+
+  const doc = new PDFDocument({ margin: 50 });
+  doc.pipe(res);
+
+  doc.fontSize(20).text(`${data.period} Business Performance Report`, { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Generated on: ${new Date().toLocaleString()}`);
+  doc.text(`Period: ${data.filterDate.toLocaleDateString()} to ${data.now.toLocaleDateString()}`);
+  doc.moveDown();
+
+  doc.fontSize(14).text("Financial Summary", { underline: true });
+  doc.fontSize(12).text(`Total Sales: ₹${data.totalSales.toLocaleString()}`);
+  doc.text(`Total Expenses: ₹${data.totalCost.toLocaleString()}`);
+  doc.text(`Net Profit: ₹${data.totalProfit.toLocaleString()}`);
+  doc.text(`Profit Margin: ${data.profitMargin}%`);
+  doc.moveDown();
+
+  doc.fontSize(14).text("Sales Breakdown", { underline: true });
+  data.filteredSales.forEach((s, idx) => {
+    doc.fontSize(10).text(`${idx + 1}. ${s.product} - ₹${s.total} (${new Date(s.date).toLocaleDateString()})`);
+  });
+
+  doc.end();
+});
+
+app.get("/reports/export/excel", injectToken, verifyToken, async (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { period } = req.query;
+  const data = getReportData(req.user.businessId, period || "Weekly");
+
+  const workbook = await generateExcelReport(data);
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename=Report_${period}_${Date.now()}.xlsx`);
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
+
+
+app.post("/reports/generate-on-demand", verifyToken, async (req, res) => {
+  if (!["Owner", "Accountant"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const { period } = req.body;
+  const user = loadUsers().find(u => u.username === req.user.username);
+
+  if (!user || !user.email) {
+    return res.status(400).json({ message: "User email not found" });
+  }
+
+  const success = await generateAndEmailReport(req.user.businessId, user.email, period || "Weekly");
+
+  if (success) {
+    res.json({ message: "Report sent to your email successfully" });
+  } else {
+    res.status(500).json({ message: "Failed to send report email" });
+  }
+});
 
 
 

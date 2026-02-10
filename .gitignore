@@ -1,5 +1,7 @@
 # Node dependencies (ignore everywhere)
-node_modules/
+node_modules
+.env
+BACKEND/.env/
 
 # Environment variables
 .env
